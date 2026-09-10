@@ -10,5 +10,32 @@ eureka:
   client:
     register-with-eureka: true
     fetch-registry: true
+    healthcheck:
+      enabled: true # 用 actuator health 状态作为 eureka 注册状态，更准确
     service-url:
       defaultZone: http://localhost:8761/eureka/
+
+# Actuator 端点配置
+# health: 显示完整健康详情（含磁盘、ping、eureka 等）
+# httpexchanges: 最近 100 次 HTTP 请求跟踪（Spring Boot 4 的 trace 端点）
+# info: 应用信息；metrics: 指标；env: 环境变量；loggers: 日志级别
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,httpexchanges,metrics,env,loggers
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0 # 采样率 1.0=100%（开发用），生产建议 0.1=10%
+    propagation:
+      type: w3c # trace 上下文透传格式，w3c 是业界标准，兼容 B3
+
+# 日志格式：在每行日志前加 [服务名,traceId,spanId]
+# %X{traceId:-} 表示从 MDC 取 traceId，没有则显示空（:- 是默认值语法）
+# 这样 serviceA 调用 serviceB 时，两边日志能通过同一个 traceId 串起来
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

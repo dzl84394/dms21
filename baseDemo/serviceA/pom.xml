@@ -25,6 +25,18 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
+        <!-- Actuator：健康检查 /actuator/health、请求跟踪 /actuator/httpexchanges 等 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Micrometer Tracing 桥（OpenTelemetry）：把 Spring 的 Observation 转成 OTel Span，
+             自动在 RestClient/RestTemplate 调用时透传 traceId，写进 MDC 供日志输出
+             不上报 Zipkin 后端也能用，traceId 会进日志和 httpexchanges 端点 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

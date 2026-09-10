@@ -15,3 +15,16 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     hostname: localhost
+
+# Actuator 端点配置
+# health: 显示完整健康详情（含磁盘、ping、eureka 等）
+# httpexchanges: 最近 100 次 HTTP 请求跟踪（Spring Boot 4 的 trace 端点）
+# info: 应用信息；metrics: 指标；env: 环境变量；loggers: 日志级别
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,httpexchanges,metrics,env,loggers
+  endpoint:
+    health:
+      show-details: always
