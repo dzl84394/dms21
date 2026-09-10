@@ -1,0 +1,17 @@
+server:
+  port: 8761 # Eureka Server 默认端口
+
+spring:
+  application:
+    name: eureka-server
+
+# Eureka Server 单机配置
+# 单机模式下不需要向自己注册、也不需要从自己拉取注册表
+eureka:
+  client:
+    register-with-eureka: false # 不把自己注册到注册中心
+    fetch-registry: false       # 不拉取注册表
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    hostname: localhost

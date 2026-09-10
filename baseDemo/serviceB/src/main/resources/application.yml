@@ -1,0 +1,14 @@
+server:
+  port: 8082 # serviceB 端口
+
+spring:
+  application:
+    name: service-b # Eureka 中的服务名，serviceA 用 "http://service-b" 调用它
+
+# 注册到 Eureka
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
