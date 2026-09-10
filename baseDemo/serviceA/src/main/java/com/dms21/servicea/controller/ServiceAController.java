@@ -33,4 +33,18 @@ public class ServiceAController {
                 .retrieve()
                 .body(String.class);
     }
+
+    /**
+     * 供 serviceB 通过 Eureka 调用的端点
+     *
+     * 示例：
+     *   直接访问：curl http://localhost:8081/hello
+     *   经 serviceB：curl http://localhost:8082/callA
+     *
+     * @return 固定问候语
+     */
+    @GetMapping("/hello")
+    public String hello() {
+        return "Hello from serviceA (port 8081)";
+    }
 }
