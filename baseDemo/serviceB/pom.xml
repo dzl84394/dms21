@@ -26,4 +26,15 @@
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 打可执行 jar：repackage 把内嵌依赖打进 fat-jar
+                 version/execution 由 spring-boot-starter-parent 的 pluginManagement 提供 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>
