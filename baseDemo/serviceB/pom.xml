@@ -28,6 +28,8 @@
     </dependencies>
 
     <build>
+        <!-- 输出 jar 名不带版本号：serviceB.jar 而非 serviceB-1.0.0-SNAPSHOT.jar -->
+        <finalName>${project.artifactId}</finalName>
         <plugins>
             <!-- 打可执行 jar：repackage 把内嵌依赖打进 fat-jar
                  version/execution 由 spring-boot-starter-parent 的 pluginManagement 提供 -->
