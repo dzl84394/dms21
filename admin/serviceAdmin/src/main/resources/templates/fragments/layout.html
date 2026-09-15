@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<!--
+  公共布局 fragment（Thymeleaf），所有管理页面共用：
+
+  用法一（<head> 整体替换，带公共样式；refresh=true 时页面每 10 秒自动刷新）：
+    <head th:replace="~{fragments/layout :: head('监控大盘', true)}"></head>
+
+  用法二（左侧导航）：
+    <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
+    active 参数用于高亮当前页：dashboard / services / groups
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:fragment="head(title, refresh)">
+    <meta charset="UTF-8">
+    <!-- 只有服务清单要自动刷新，其他页面传 false 不输出这行 -->
+    <meta th:if="${refresh}" http-equiv="refresh" content="30">
+    <title th:text="${title}">serviceAdmin</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+               background: #f5f6fa; color: #2f3542; }
+        /* ===== 左侧导航 ===== */
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+                   background: #2f3542; color: #c8ccd4; padding: 18px 0;
+                   overflow-y: auto; }
+        .sidebar .brand { font-size: 16px; font-weight: 700; color: #fff;
+                          padding: 0 20px 16px; border-bottom: 1px solid #414957; }
+        .sidebar .main-nav { padding: 12px 0; border-bottom: 1px solid #414957; }
+        .sidebar a { display: flex; justify-content: space-between; align-items: center;
+                     padding: 9px 20px; color: #c8ccd4; text-decoration: none; font-size: 13px; }
+        .sidebar a:hover { background: #3a4250; color: #fff; }
+        .sidebar a.on { background: #3742fa; color: #fff; }
+        .sidebar .tree-title { font-size: 12px; color: #808a99; padding: 14px 20px 6px; }
+        .sidebar .count { background: #414957; color: #c8ccd4; border-radius: 9px;
+                          padding: 1px 8px; font-size: 11px; }
+        .sidebar a.on .count, .sidebar a:hover .count { background: rgba(255,255,255,.25); color: #fff; }
+        .sidebar .pending-tip { font-size: 12px; color: #ffa502; padding: 10px 20px 0; }
+        /* ===== 内容区 ===== */
+        .content { margin-left: 220px; padding: 24px 28px; min-width: 900px; }
+        h1 { font-size: 20px; margin-bottom: 6px; }
+        .desc, .summary { color: #747d8c; font-size: 13px; margin-bottom: 16px; }
+        .summary b { color: #2f3542; }
+        /* ===== 表格/卡片 ===== */
+        table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px;
+                border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+        th { background: #2f3542; color: #fff; text-align: left;
+             padding: 9px 12px; font-weight: 500; white-space: nowrap; }
+        td { padding: 8px 12px; border-top: 1px solid #f1f2f6; }
+        tbody tr:hover td { background: #f1f2f6; }
+        .card { background: #fff; border-radius: 10px; padding: 16px 20px;
+                box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 18px; }
+        .card h2 { font-size: 15px; margin: 0 0 12px; }
+        /* ===== 表单控件 ===== */
+        input[type=text], select { padding: 5px 8px; border: 1px solid #ced6e0;
+                                   border-radius: 6px; font-size: 13px; background: #fff; }
+        button { padding: 5px 14px; border: none; border-radius: 6px; cursor: pointer;
+                 background: #2f3542; color: #fff; font-size: 12px; }
+        button:hover { opacity: .85; }
+        button.del { background: #ff6b81; }
+        button:disabled { background: #a4b0be; cursor: not-allowed; }
+        .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px;
+                   font-size: 13px; flex-wrap: wrap; }
+        /* ===== 徽章/辅助 ===== */
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 10px;
+                 font-size: 12px; color: #fff; }
+        .ok   { background: #2ed573; }   /* UP / 已固定 */
+        .warn { background: #ffa502; }   /* PARTIAL / 待确认 */
+        .bad  { background: #ff4757; }   /* DOWN / UNREACHABLE */
+        .gray { background: #a4b0be; }
+        .muted { color: #a4b0be; }
+        .pending-row td { background: #fffbe6; }
+        .pending-row:hover td { background: #fff6d6; }
+        .group { font-weight: 600; }
+        .sys { color: #747d8c; font-size: 12px; margin-left: 4px; }
+        .chk { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px;
+               cursor: pointer; background: #fff; padding: 4px 12px; border-radius: 14px;
+               border: 1px solid #ced6e0; }
+        .chk input { accent-color: #2f3542; cursor: pointer; }
+        .inline-form { display: inline-flex; gap: 6px; align-items: center; }
+        /* ===== 分页条 ===== */
+        .pager { display: flex; align-items: center; gap: 14px; margin-top: 14px; font-size: 13px; }
+        .pager a { color: #3742fa; text-decoration: none; padding: 4px 12px;
+                   background: #fff; border-radius: 6px; border: 1px solid #ced6e0; }
+        .pager a:hover { background: #f1f2f6; }
+        .pager .info { color: #747d8c; }
+    </style>
+</head>
+
+<!--
+  左侧导航 fragment：
+    主体三个入口 + "按业务组浏览"树（treeGroups 由 SidebarAdvice 全局注入，节点点击直达过滤后的微服务管理页）
+    pendingCount > 0 时在"微服务管理"旁显示待确认数量提醒
+-->
+<div class="sidebar" th:fragment="sidebar(active)">
+    <div class="brand">serviceAdmin</div>
+    <nav class="main-nav">
+        <a th:href="@{/admin}" th:classappend="${active == 'dashboard'} ? 'on'">
+            <span>监控大盘</span>
+        </a>
+        <a th:href="@{/admin/services}" th:classappend="${active == 'services'} ? 'on'">
+            <span>微服务管理</span>
+            <span class="count" th:if="${pendingCount > 0}" th:text="${pendingCount}">0</span>
+        </a>
+        <a th:href="@{/admin/groups}" th:classappend="${active == 'groups'} ? 'on'">
+            <span>业务组管理</span>
+        </a>
+    </nav>
+    <div class="tree-title">按业务组浏览</div>
+    <nav>
+        <!-- 未分组节点（code=__none__）排在最后，SidebarAdvice 已保证顺序 -->
+        <a th:each="g : ${treeGroups}"
+           th:href="@{/admin/services(bizGroup=${g.code})}"
+           th:classappend="${active == 'services' and bizGroup == g.code} ? 'on'">
+            <span th:text="${g.code == noneGroup ? g.cn : (g.cn != '' ? g.code + '·' + g.cn : g.code)}">xw·信维业务线</span>
+            <span class="count" th:text="${g.count}">0</span>
+        </a>
+    </nav>
+</div>
+</html>

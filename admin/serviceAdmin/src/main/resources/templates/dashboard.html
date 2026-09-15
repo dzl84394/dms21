@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式，30 秒自动刷新）+ 左侧导航，active=dashboard 高亮 -->
+<head th:replace="~{fragments/layout :: head('服务清单', true)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
+
+<main class="content">
+<h1>服务清单</h1>
+<p class="summary">
+    注册中心：<b th:text="${serviceCount}">0</b> 服务 ·
+    <b th:text="${instanceCount}">0</b> 实例
+    <span th:if="${q != '' or !selectedBizGroups.isEmpty()}">
+        · 匹配 <b th:text="${matchedCount}">0</b> 服务
+    </span>
+    · 刷新于 <b th:text="${generatedAt}">-</b>
+    （每 30 秒自动刷新；纯注册表数据，不探测服务，状态细节点"详情"去 Spring Boot Admin 看）
+</p>
+
+<!-- 搜索 + 业务组过滤：GET 表单提交，q 输入后回车即搜；checkbox 勾选即自动提交
+     meta refresh 刷新当前 URL 会带上全部参数，过滤条件在自动刷新下不丢 -->
+<form method="get" action="/admin" class="toolbar">
+    <input type="text" name="q" th:value="${q}" placeholder="搜服务名 / 中文说明" style="width:200px;">
+    <span class="chk" th:each="g : ${allBizGroups}">
+        <input type="checkbox" name="bizGroup" th:value="${g}"
+               th:checked="${selectedBizGroups.contains(g)}" onchange="this.form.submit()">
+        <span th:text="${g == '-'} ? '无分组' : ${g}">xw</span>
+    </span>
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin}" th:if="${q != '' or !selectedBizGroups.isEmpty()}"
+       style="color:#3742fa;font-size:13px;">清除条件</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>服务</th>
+        <th>业务组</th>
+        <th>系统</th>
+        <th>实例数</th>
+        <th>注册状态</th>
+        <th>详情</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- 空状态：过滤条件下无匹配服务 -->
+    <tr th:if="${#lists.isEmpty(rows)}">
+        <td colspan="6" class="muted">没有匹配的服务（检查搜索关键字 / 业务组过滤条件）</td>
+    </tr>
+    <tr th:each="row : ${rows}">
+        <td>
+            <span th:text="${row.service}">service-a</span>
+            <!-- 中文说明：微服务管理页人工编辑的（没填不显示） -->
+            <span class="sys" th:if="${row.serviceCn != ''}" th:text="${row.serviceCn}">服务A-订单中心</span>
+        </td>
+        <!-- 业务组/系统：库映射（优先）或服务自身 Eureka metadata，
+             有中文说明时显示"编码·中文名"（如 xw·信维业务线），无分组显示 "-" -->
+        <td>
+            <span class="group"
+                  th:text="${row.bizGroupName != ''} ? ${row.bizGroup + '·' + row.bizGroupName} : ${row.bizGroup}">xw·信维业务线</span>
+        </td>
+        <td th:text="${row.system}">fls-user</td>
+        <td th:text="${row.instanceCount}">1</td>
+        <!-- 注册状态（Eureka 注册表自带，非探测）：UP 绿 / DOWN 红 / 其他灰 -->
+        <td>
+            <span class="badge"
+                  th:classappend="${row.status == 'UP'} ? 'ok' : (${row.status == 'DOWN'} ? 'bad' : 'gray')"
+                  th:text="${row.status}">UP</span>
+        </td>
+        <!-- 状态细节跳转 Spring Boot Admin（SBA 实例页按 serviceId 过滤） -->
+        <td><a th:href="${row.detailUrl}" target="_blank" style="color:#3742fa;">SBA 详情 →</a></td>
+    </tr>
+    </tbody>
+</table>
+
+<!-- 分页：保持 q / bizGroup 条件翻页 -->
+<div class="pager" th:if="${totalPages > 1}">
+    <a th:if="${page > 1}"
+       th:href="@{/admin(page=${page - 1}, q=${q}, bizGroup=${selectedBizGroups})}">← 上一页</a>
+    <span class="info">第 <b th:text="${page}">1</b> / <b th:text="${totalPages}">1</b> 页
+        · 共 <b th:text="${matchedCount}">0</b> 个服务</span>
+    <a th:if="${page < totalPages}"
+       th:href="@{/admin(page=${page + 1}, q=${q}, bizGroup=${selectedBizGroups})}">下一页 →</a>
+</div>
+</main>
+
+</body>
+</html>

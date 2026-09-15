@@ -1,0 +1,61 @@
+server:
+  port: 8083 # serviceAdmin 端口
+
+spring:
+  application:
+    name: service-admin
+  thymeleaf:
+    cache: false # 开发期关缓存，改模板刷新即生效；生产建议 true
+  # H2 内嵌数据库（文件模式）：业务组管理数据落盘在启动目录的 data/ 下，重启不丢
+  # jdbc:h2:file:./data/serviceadmin → 生成 data/serviceadmin.mv.db
+  datasource:
+    url: jdbc:h2:file:./data/serviceadmin;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: "" # 内嵌库本机使用，无密码
+  jpa:
+    hibernate:
+      ddl-auto: update # 按实体自动建表/加列（H2 内嵌库专用做法）
+    open-in-view: false # 关闭 OSIV，避免视图渲染期间占用数据库连接
+    show-sql: false
+  # H2 自带 Web 控制台：浏览器访问 /h2-console，JDBC URL 填上面 datasource.url
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# Spring Boot Admin Server 地址：服务清单页"详情"跳转用（SBA 实例页按 serviceId 过滤）
+sba:
+  url: http://localhost:8080
+
+# 注册到 Eureka（baseDemo/eureka）
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    healthcheck:
+      enabled: true # 用 actuator health 状态作为 eureka 注册状态，更准确
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+# Actuator 端点配置（与 serviceA/serviceB 一致）
+# health: 健康详情；httpexchanges: 最近 100 次 HTTP 请求跟踪
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,httpexchanges,metrics,env,loggers
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0 # 采样率 1.0=100%（开发用），生产建议 0.1=10%
+    propagation:
+      type: w3c # trace 上下文透传格式
+
+# 日志格式：在每行日志前加 [服务名,traceId,spanId]
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

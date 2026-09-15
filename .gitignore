@@ -12,6 +12,14 @@ target/
 # OS
 .DS_Store
 
+# LLVM 插桩产生的性能剖析数据（IDE 环境自动生成，无用）
+*.profraw
+
+# H2 内嵌数据库文件（serviceAdmin 的本地数据，不入库 git）
+data/
+*.mv.db
+*.trace.db
+
 # Logs
 *.log
 logs/

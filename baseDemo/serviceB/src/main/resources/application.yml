@@ -14,7 +14,11 @@ eureka:
       enabled: true # 用 actuator health 状态作为 eureka 注册状态，更准确
     service-url:
       defaultZone: http://localhost:8761/eureka/
-
+  instance:
+    metadata-map:
+      bizGroup: xw
+      system: fls-user
+    prefer-ip-address: true
 # Actuator 端点配置
 # health: 显示完整健康详情（含磁盘、ping、eureka 等）
 # httpexchanges: 最近 100 次 HTTP 请求跟踪（Spring Boot 4 的 trace 端点）

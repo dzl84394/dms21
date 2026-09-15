@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 与 baseDemo 同版本：Spring Boot 4.0.8 + JDK 21 -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.8</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.dms21</groupId>
+    <artifactId>serviceAdmin</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <name>serviceAdmin</name>
+    <description>serviceAdmin: 独立微服务，注册到 baseDemo 的 Eureka</description>
+
+    <properties>
+        <!-- JDK 21（LTS），Spring Boot 4 要求 17+ -->
+        <java.version>21</java.version>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <!-- Spring Cloud 2025.1.x 对应 Spring Boot 4.0.x，与 baseDemo 一致 -->
+        <spring-cloud.version>2025.1.3</spring-cloud.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Web 服务提供 HTTP 接口 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- Eureka Client：注册到注册中心（baseDemo/eureka, localhost:8761） -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+        <!-- Actuator：健康检查 /actuator/health、请求跟踪 /actuator/httpexchanges 等 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- Thymeleaf：服务端渲染监控大盘页面（/admin），无需单独前端工程 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <!-- Spring Data JPA：业务组管理数据入库（H2 内嵌库） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <!-- H2：Java 编写的内嵌数据库，文件模式落盘，重启数据不丢 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Micrometer Tracing 桥（OpenTelemetry）：traceId 进日志和 httpexchanges 端点，
+             不上报 Zipkin 后端也能用（与 serviceA/serviceB 保持一致） -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <!-- 输出 jar 名不带版本号：serviceAdmin.jar -->
+        <finalName>${project.artifactId}</finalName>
+        <plugins>
+            <!-- 打可执行 jar：repackage 把内嵌依赖打进 fat-jar
+                 version/execution 由 spring-boot-starter-parent 的 pluginManagement 提供 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
