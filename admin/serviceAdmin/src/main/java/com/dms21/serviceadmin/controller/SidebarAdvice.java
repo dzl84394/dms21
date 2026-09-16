@@ -4,24 +4,16 @@ import com.dms21.serviceadmin.service.ServiceGroupService;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 /**
- * 左侧导航树的公共数据：所有页面（大盘/微服务管理/业务组管理）渲染时自动注入 treeGroups
+ * 左侧导航的公共数据：所有页面（服务清单/微服务管理/业务组管理）渲染时自动注入
  *
- * 树结构 = 三个固定导航 + "按业务组浏览"分组节点（带各自服务数），
- * 分组节点点击直达 /admin/services?bizGroup=xxx 过滤后的微服务列表
- *
- * 数据只来自库（已入库 = 已纳入管理流程），注册表里还没同步进库的服务不进树
+ * 导航只放功能入口（新增功能页面直接在 layout.html 的 main-nav 里加 <a>）；
+ * 业务组不进导航，分组过滤在"微服务管理"页下拉里做
  */
 @ControllerAdvice
 public class SidebarAdvice {
 
-    /** 未分组节点在 URL 上的特殊值（空串无法与"未传参"区分，用这个哨兵值） */
+    /** 未分组的哨兵值（空串无法与"未传参"区分）；微服务管理页下拉的"未分组"选项用它 */
     public static final String NONE_GROUP = "__none__";
 
     private final ServiceGroupService serviceGroupService;
@@ -30,36 +22,7 @@ public class SidebarAdvice {
         this.serviceGroupService = serviceGroupService;
     }
 
-    /**
-     * 组装"按业务组浏览"树节点：组编码 + 中文名 + 服务数，按编码排序，未分组固定在最后
-     *
-     * 返回示例：
-     * [ {code: "hx", cn: "华信业务线", count: 12},
-     *   {code: "xw", cn: "信维业务线", count: 8},
-     *   {code: "__none__", cn: "未分组", count: 980} ]
-     */
-    @ModelAttribute("treeGroups")
-    public List<Map<String, Object>> treeGroups() {
-        Map<String, Long> counts = serviceGroupService.countByGroup();
-        Map<String, String> dictNames = serviceGroupService.dictNameMap();
-
-        List<Map<String, Object>> nodes = new ArrayList<>();
-        Long noneCount = null;
-        for (Map.Entry<String, Long> entry : new TreeMap<>(counts).entrySet()) {
-            String code = entry.getKey();
-            if (NONE_GROUP.equals(code)) {
-                noneCount = entry.getValue(); // 未分组排最后
-                continue;
-            }
-            nodes.add(node(code, dictNames.getOrDefault(code, ""), entry.getValue()));
-        }
-        if (noneCount != null) {
-            nodes.add(node(NONE_GROUP, "未分组", noneCount));
-        }
-        return nodes;
-    }
-
-    /** 待确认（还没固定）的服务数，导航树顶部小红点提示用 */
+    /** 待确认（还没固定）的服务数，导航"微服务管理"旁的数量提醒用 */
     @ModelAttribute("pendingCount")
     public long pendingCount() {
         return serviceGroupService.listAll().stream()
@@ -67,17 +30,9 @@ public class SidebarAdvice {
                 .count();
     }
 
-    /** 未分组哨兵值，sidebar 模板判断节点显示用 */
+    /** 未分组哨兵值，页面模板判断用 */
     @ModelAttribute("noneGroup")
     public String noneGroup() {
         return NONE_GROUP;
-    }
-
-    private Map<String, Object> node(String code, String cn, Long count) {
-        Map<String, Object> node = new LinkedHashMap<>();
-        node.put("code", code);
-        node.put("cn", cn == null ? "" : cn);
-        node.put("count", count);
-        return node;
     }
 }

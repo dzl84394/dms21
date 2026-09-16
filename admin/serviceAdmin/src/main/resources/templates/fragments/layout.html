@@ -87,15 +87,15 @@
 </head>
 
 <!--
-  左侧导航 fragment：
-    主体三个入口 + "按业务组浏览"树（treeGroups 由 SidebarAdvice 全局注入，节点点击直达过滤后的微服务管理页）
-    pendingCount > 0 时在"微服务管理"旁显示待确认数量提醒
+  左侧导航 fragment：只放功能入口（新增功能页面就在 main-nav 里加 <a>），
+  业务组不进导航，分组浏览/过滤都在"微服务管理"页的下拉里做
+  pendingCount > 0 时在"微服务管理"旁显示待确认数量提醒
 -->
 <div class="sidebar" th:fragment="sidebar(active)">
     <div class="brand">serviceAdmin</div>
     <nav class="main-nav">
         <a th:href="@{/admin}" th:classappend="${active == 'dashboard'} ? 'on'">
-            <span>监控大盘</span>
+            <span>Eureka 查看</span>
         </a>
         <a th:href="@{/admin/services}" th:classappend="${active == 'services'} ? 'on'">
             <span>微服务管理</span>
@@ -103,16 +103,6 @@
         </a>
         <a th:href="@{/admin/groups}" th:classappend="${active == 'groups'} ? 'on'">
             <span>业务组管理</span>
-        </a>
-    </nav>
-    <div class="tree-title">按业务组浏览</div>
-    <nav>
-        <!-- 未分组节点（code=__none__）排在最后，SidebarAdvice 已保证顺序 -->
-        <a th:each="g : ${treeGroups}"
-           th:href="@{/admin/services(bizGroup=${g.code})}"
-           th:classappend="${active == 'services' and bizGroup == g.code} ? 'on'">
-            <span th:text="${g.code == noneGroup ? g.cn : (g.cn != '' ? g.code + '·' + g.cn : g.code)}">xw·信维业务线</span>
-            <span class="count" th:text="${g.count}">0</span>
         </a>
     </nav>
 </div>

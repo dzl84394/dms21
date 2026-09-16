@@ -17,9 +17,11 @@
     <input type="text" name="q" th:value="${q}" placeholder="搜服务名 / 中文说明" style="width:200px;">
     <select name="bizGroup">
         <option value="">全部业务组</option>
-        <option th:each="g : ${treeGroups}" th:value="${g.code}"
-                th:text="${g.code == noneGroup ? g.cn : (g.cn != '' ? g.code + '·' + g.cn : g.code)}"
-                th:selected="${bizGroup == g.code}">xw·信维业务线</option>
+        <!-- 选项来自业务组字典（显示编码·中文说明，提交编码）；__none__=未分组（search() 支持该哨兵值） -->
+        <option value="__none__" th:selected="${bizGroup == '__none__'}">未分组</option>
+        <option th:each="d : ${dicts}" th:value="${d.groupCode}"
+                th:text="${d.groupCode + (d.groupName != null and !d.groupName.isEmpty() ? '·' + d.groupName : '')}"
+                th:selected="${bizGroup == d.groupCode}">hx·华信业务线</option>
     </select>
     <select name="status">
         <option value="">全部状态</option>
