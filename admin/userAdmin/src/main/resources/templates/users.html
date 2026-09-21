@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=users 高亮 -->
+<head th:replace="~{fragments/layout :: head('用户管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('users')}"></div>
+
+<main class="content">
+<h1>用户管理</h1>
+<p class="desc">
+    维护系统用户：登录账号、姓名、角色、联系方式、启用状态。
+    <b>新增和编辑都跳转到独立的表单页</b>（共用同一个表单页）：点「新增用户」或行内「编辑」进入。
+    编辑时<b>密码框留空 = 不修改原密码</b>；停用用户后其账号保留但不可登录。
+</p>
+
+<!-- 顶部主操作：进入新建模式 -->
+<div class="toolbar" style="margin-bottom:10px;">
+    <a th:href="@{/admin/users/form}" class="btn-primary" style="display:inline-block;
+       background:#3742fa;color:#fff;padding:7px 16px;border-radius:6px;
+       text-decoration:none;font-size:13px;">+ 新增用户</a>
+</div>
+
+<!-- 搜索：GET 表单 -->
+<form method="get" th:action="@{/admin/users}" class="toolbar">
+    <input type="text" name="q" th:value="${q}" placeholder="搜登录账号 / 姓名" style="width:200px;">
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/users}" th:if="${q != ''}" style="color:#3742fa;">清除条件</a>
+</form>
+
+<!-- 列表只读展示，行内不出现输入框；编辑统一跳独立表单页 -->
+<table>
+    <thead>
+    <tr>
+        <th>登录账号</th>
+        <th>姓名</th>
+        <th>角色</th>
+        <th>邮箱</th>
+        <th>手机</th>
+        <th>启用</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(users)}">
+        <td colspan="8" class="muted">没有匹配的用户（点上方「新增用户」创建，如 admin/123456）</td>
+    </tr>
+    <tr th:each="u : ${users}">
+        <td th:text="${u.username}">admin</td>
+        <td th:text="${u.realName != null and !u.realName.isEmpty()} ? ${u.realName} : '-'">管理员</td>
+        <td th:text="${u.role == 'admin'} ? '管理员' : '普通用户'">管理员</td>
+        <td th:text="${u.email != null and !u.email.isEmpty()} ? ${u.email} : '-'">-</td>
+        <td th:text="${u.phone != null and !u.phone.isEmpty()} ? ${u.phone} : '-'">-</td>
+        <td>
+            <span class="badge" th:classappend="${u.isEnabled()} ? 'ok' : 'warn'"
+                  th:text="${u.isEnabled()} ? '启用' : '停用'">启用</span>
+        </td>
+        <td class="muted"
+            th:text="${u.updatedAt != null} ? ${#temporals.format(u.updatedAt, 'MM-dd HH:mm')} : '-'">09-21 20:00</td>
+        <td class="inline-form">
+            <!-- 编辑：跳独立表单页（预填数据），保留搜索关键字 -->
+            <a th:href="@{/admin/users/form(id=${u.id}, q=${q})}" style="color:#3742fa;">编辑</a>
+            <!-- 删除：行内独立小表单 -->
+            <form method="post" th:action="@{'/admin/users/delete/' + ${u.id}}" class="inline-form">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>

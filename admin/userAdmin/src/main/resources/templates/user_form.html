@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=users 高亮 -->
+<head th:replace="~{fragments/layout :: head('用户表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('users')}"></div>
+
+<main class="content">
+<!--
+    新建/编辑共用的独立表单页（/admin/users/form）
+    user == null → 新建模式：账号可填、密码必填、按钮"创建用户"
+    user != null → 编辑模式：账号只读、密码留空不改、按钮"保存修改"
+-->
+<h1 th:text="${user != null} ? '编辑用户：' + ${user.username} : '新增用户'">新增用户</h1>
+<p class="desc" th:if="${user != null}">
+    登录账号创建后<b>不允许修改</b>；密码框留空 = 保留原密码。
+</p>
+<p class="desc" th:if="${user == null}">
+    登录账号全局唯一；角色 admin 可管理本系统全部数据。
+</p>
+
+<div class="card">
+    <form method="post" th:action="@{/admin/users/save}">
+        <input type="hidden" name="id" th:value="${user?.id}">
+        <table style="max-width:560px;">
+            <tr>
+                <td style="width:110px;">登录账号 <span th:if="${user == null}" style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="username" required th:value="${user?.username}"
+                           th:readonly="${user != null}" placeholder="如 zhangsan" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    密码 <span th:if="${user == null}" style="color:#ff6b81;">*</span>
+                    <div class="muted" style="font-size:11px;" th:if="${user != null}">留空=不修改</div>
+                </td>
+                <td>
+                    <input type="password" name="password" th:required="${user == null}"
+                           th:placeholder="${user != null} ? '留空表示不修改原密码' : '至少 6 位'"
+                           style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>姓名</td>
+                <td><input type="text" name="realName" th:value="${user?.realName}"
+                           placeholder="如 张三" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>角色</td>
+                <td>
+                    <select name="role" style="width:100%;">
+                        <option value="user" th:selected="${user?.role == 'user'}">普通用户</option>
+                        <option value="admin" th:selected="${user?.role == 'admin'}">管理员</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>邮箱</td>
+                <td><input type="text" name="email" th:value="${user?.email}"
+                           placeholder="如 zhangsan@dms21.com" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>手机</td>
+                <td><input type="text" name="phone" th:value="${user?.phone}"
+                           placeholder="如 13800000000" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>状态</td>
+                <td>
+                    <label class="chk"><input type="checkbox" name="enabled"
+                           th:checked="${user == null or user.isEnabled()}">启用（停用后不可登录）</label>
+                </td>
+            </tr>
+        </table>
+        <div class="toolbar" style="margin-top:14px;">
+            <button type="submit" th:text="${user != null} ? '保存修改' : '创建用户'">创建用户</button>
+            <!-- 取消：回列表（PRG，不提交任何数据） -->
+            <a th:href="@{/admin/users}" style="color:#808a99;">取消返回列表</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

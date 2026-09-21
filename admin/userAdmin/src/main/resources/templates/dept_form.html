@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=dept 高亮 -->
+<head th:replace="~{fragments/layout :: head('部门表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('dept')}"></div>
+
+<main class="content">
+<!--
+    新建/编辑共用的独立表单页（/admin/depts/form）
+    dept == null → 新建模式：可挂到任意上级（或顶级）；?parentId=x 时上级预选
+    dept != null → 编辑模式：上级下拉剔除自己及子孙（Service 层保证，防层级成环）
+-->
+<h1 th:text="${dept != null} ? '编辑部门：' + ${dept.deptName} : '新增部门'">新增部门</h1>
+<p class="desc" th:if="${dept != null}">
+    上级部门下拉里<b>不包含自己及其下级</b>（防止层级成环）；选"（作为顶级部门）"即脱离父节点。
+</p>
+<p class="desc" th:if="${dept == null}">
+    部门可无限往下分：先建顶级（如 总公司），再在列表里点「新增下级」逐层搭建。
+</p>
+
+<div class="card">
+    <form method="post" th:action="@{/admin/depts/save}">
+        <input type="hidden" name="id" th:value="${dept?.id}">
+        <table style="max-width:560px;">
+            <tr>
+                <td style="width:110px;">部门名称 <span style="color:#ff6b81;">*</span></td>
+                <td><input type="text" name="deptName" required th:value="${dept?.deptName}"
+                           placeholder="如 研发部 / 平台组" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>上级部门</td>
+                <td>
+                    <select name="parentId" style="width:100%;">
+                        <option value="" th:selected="${preselectParentId == null}">（作为顶级部门）</option>
+                        <!-- 树形候选：按层级缩进展示；编辑时不含自己及子孙 -->
+                        <option th:each="n : ${options}" th:value="${n.dept.id}"
+                                th:text="${#strings.repeat('　', n.depth)} + (${n.depth > 0} ? '└ ' : '') + ${n.dept.deptName}"
+                                th:selected="${preselectParentId == n.dept.id}">研发部</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>同级排序</td>
+                <td>
+                    <input type="number" name="sort" th:value="${dept?.sort != null} ? ${dept.sort} : 0"
+                           min="0" style="width:100px;">
+                    <span class="muted" style="font-size:11px;">数字小的排在前面</span>
+                </td>
+            </tr>
+        </table>
+        <div class="toolbar" style="margin-top:14px;">
+            <button type="submit" th:text="${dept != null} ? '保存修改' : '创建部门'">创建部门</button>
+            <a th:href="@{/admin/depts}" style="color:#808a99;">取消返回列表</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

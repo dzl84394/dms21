@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=dept 高亮 -->
+<head th:replace="~{fragments/layout :: head('部门管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('dept')}"></div>
+
+<main class="content">
+<h1>部门管理</h1>
+<p class="desc">
+    维护部门树：<b>每个部门可以挂一个上级部门，层级往下分</b>（如 总公司 → 研发部 → 平台组）。
+    新增和编辑都跳到独立表单页；有下级部门的节点不允许删除。
+</p>
+
+<!-- 顶部主操作：进入新建模式 -->
+<div class="toolbar" style="margin-bottom:10px;">
+    <a th:href="@{/admin/depts/form}" class="btn-primary" style="display:inline-block;
+       background:#3742fa;color:#fff;padding:7px 16px;border-radius:6px;
+       text-decoration:none;font-size:13px;">+ 新增顶级部门</a>
+</div>
+
+<!-- 树形列表：dept.depth 控制缩进，子部门显示 └ 前缀 -->
+<table>
+    <thead>
+    <tr>
+        <th>部门（层级缩进）</th>
+        <th>层级</th>
+        <th>排序</th>
+        <th>上级ID</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(tree)}">
+        <td colspan="6" class="muted">还没有部门，点上方「新增顶级部门」创建，如 总公司</td>
+    </tr>
+    <tr th:each="n : ${tree}">
+        <td>
+            <!-- 深度缩进：每层两个全角空格 + 下级加 └ 前缀 -->
+            <span th:text="${#strings.repeat('　', n.depth)} + (${n.depth > 0} ? '└ ' : '')">总公司</span>
+            <b th:text="${n.dept.deptName}">总公司</b>
+        </td>
+        <td th:text="${n.depth + 1}">1</td>
+        <td th:text="${n.dept.sort != null} ? ${n.dept.sort} : 0">1</td>
+        <td class="muted" th:text="${n.dept.parentId != null} ? ${n.dept.parentId} : '-'">-</td>
+        <td class="muted"
+            th:text="${n.dept.updatedAt != null} ? ${#temporals.format(n.dept.updatedAt, 'MM-dd HH:mm')} : '-'">09-21 20:00</td>
+        <td class="inline-form">
+            <!-- 新增下级：表单页预选上级为当前部门 -->
+            <a th:href="@{/admin/depts/form(parentId=${n.dept.id})}" style="color:#2ed573;">新增下级</a>
+            <!-- 编辑：跳独立表单页（上级下拉自动剔除自己及子孙，防成环） -->
+            <a th:href="@{/admin/depts/form(id=${n.dept.id})}" style="color:#3742fa;">编辑</a>
+            <!-- 删除：行内独立小表单；有下级会被后端拒绝 -->
+            <form method="post" th:action="@{'/admin/depts/delete/' + ${n.dept.id}}" class="inline-form">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>
