@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=subsystem 高亮 -->
+<head th:replace="~{fragments/layout :: head('子系统管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('subsystem')}"></div>
+
+<main class="content">
+<h1>子系统管理</h1>
+<p class="desc">
+    维护子系统划分：子系统编码、中文说明、归属业务组、三类负责人。
+    子系统介于业务组与微服务之间：一个业务组下有多个子系统，一个子系统下有多个微服务。当前为占位页，具体维护能力待补充。
+</p>
+
+<div class="card">
+    <h2>子系统清单</h2>
+    <p class="muted">功能建设中：后续在此放"新增子系统"表单和清单表格（与微服务管理同一套交互风格）。</p>
+</div>
+</main>
+
+</body>
+</html>

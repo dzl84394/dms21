@@ -12,20 +12,20 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 /**
- * 服务业务组映射实体：哪台服务属于哪个业务组/系统，带人工确认机制
+ * 服务业务组映射实体：哪台服务属于哪个业务组/系统，带三类负责人和人工确认机制
  *
  * 生命周期：
  *   Eureka 新服务自动同步入库 → confirmed=false（"待确认"）
- *   → 人工补中文说明、选业务组 → 点"确认固定" → confirmed=true（"固定微服务"）
+ *   → 人工补中文说明、选业务组、填三类负责人 → 点"确认固定" → confirmed=true（"固定微服务"）
  *
  * 表结构（H2 自动建表，ddl-auto: update）：
  *   T_SERVICE_GROUP
- *   ┌────┬──────────────┬─────────────────┬───────────┬──────────┬───────────┐
- *   │ id │ service_name │ service_name_cn │ biz_group │  system  │ confirmed │
- *   ├────┼──────────────┼─────────────────┼───────────┼──────────┼───────────┤
- *   │ 1  │ service-a    │ 服务A-订单中心   │    hx     │ fls-order│   true    │
- *   │ 2  │ service-b    │ (待确认)         │    xw     │ fls-user │   false   │
- *   └────┴──────────────┴─────────────────┴───────────┴──────────┴───────────┘
+ *   ┌────┬──────────────┬─────────────────┬───────────┬──────────┬───────────┬───────────┬───────────┬───────────┐
+ *   │ id │ service_name │ service_name_cn │ biz_group │  system  │ tech_owner│ biz_owner │ ops_owner │ confirmed │
+ *   ├────┼──────────────┼─────────────────┼───────────┼──────────┼───────────┼───────────┼───────────┼───────────┤
+ *   │ 1  │ service-a    │ 服务A-订单中心   │    hx     │ fls-order│   张三     │    李四    │    王五    │   true    │
+ *   │ 2  │ service-b    │ (待确认)         │    xw     │ fls-user │           │           │           │   false   │
+ *   └────┴──────────────┴─────────────────┴───────────┴──────────┴───────────┴───────────┴───────────┴───────────┘
  *
  * service_name 唯一（一个服务一条配置），统一用小写存储，避免 Eureka 大写应用名的坑
  *
@@ -34,6 +34,7 @@ import java.time.LocalDateTime;
  *   e.setServiceName("service-a");
  *   e.setServiceNameCn("服务A-订单中心");
  *   e.setBizGroup("hx");
+ *   e.setTechOwner("张三");
  */
 @Entity
 @Table(name = "t_service_group")
@@ -59,6 +60,18 @@ public class ServiceGroupEntity {
     /** 所属系统，如 fls-user / fls-order */
     @Column(name = "system", length = 64)
     private String system;
+
+    /** 技术负责人，如 "张三"；空表示还没人填 */
+    @Column(name = "tech_owner", length = 64)
+    private String techOwner;
+
+    /** 业务负责人，如 "李四" */
+    @Column(name = "biz_owner", length = 64)
+    private String bizOwner;
+
+    /** 运维负责人，如 "王五" */
+    @Column(name = "ops_owner", length = 64)
+    private String opsOwner;
 
     /** 是否已确认固定：true=人工确认过的固定微服务；false=同步进来还没确认 */
     @Column(name = "confirmed", nullable = false,
@@ -125,6 +138,30 @@ public class ServiceGroupEntity {
 
     public void setSystem(String system) {
         this.system = system;
+    }
+
+    public String getTechOwner() {
+        return techOwner;
+    }
+
+    public void setTechOwner(String techOwner) {
+        this.techOwner = techOwner;
+    }
+
+    public String getBizOwner() {
+        return bizOwner;
+    }
+
+    public void setBizOwner(String bizOwner) {
+        this.bizOwner = bizOwner;
+    }
+
+    public String getOpsOwner() {
+        return opsOwner;
+    }
+
+    public void setOpsOwner(String opsOwner) {
+        this.opsOwner = opsOwner;
     }
 
     /** null 安全的确认状态（历史数据该列可能为 null） */

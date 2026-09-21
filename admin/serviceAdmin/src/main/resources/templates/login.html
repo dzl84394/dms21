@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>登录 - serviceAdmin</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+               background: #2f3542; color: #2f3542; height: 100vh;
+               display: flex; align-items: center; justify-content: center; }
+        .login-card { background: #fff; border-radius: 12px; padding: 36px 40px;
+                      width: 360px; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+        .login-card .brand { font-size: 20px; font-weight: 700; text-align: center;
+                             margin-bottom: 4px; color: #2f3542; }
+        .login-card .sub { font-size: 12px; color: #a4b0be; text-align: center;
+                           margin-bottom: 24px; }
+        .login-card label { display: block; font-size: 12px; color: #747d8c;
+                            margin: 12px 0 4px; }
+        .login-card input { width: 100%; padding: 9px 12px; border: 1px solid #ced6e0;
+                            border-radius: 6px; font-size: 14px; }
+        .login-card input:focus { outline: none; border-color: #3742fa; }
+        .login-card button { width: 100%; margin-top: 20px; padding: 10px; border: none;
+                             border-radius: 6px; background: #3742fa; color: #fff;
+                             font-size: 14px; cursor: pointer; }
+        .login-card button:hover { opacity: .88; }
+        .tip { font-size: 12px; margin-top: 14px; padding: 8px 12px;
+               border-radius: 6px; }
+        .err { background: #ffe8ea; color: #c0392b; }
+        .warn { background: #fff3d6; color: #b8860b; }
+        .hint { font-size: 11px; color: #a4b0be; text-align: center; margin-top: 16px; }
+    </style>
+</head>
+<body>
+<!-- 统一登录门户：userAdmin 等服务未登录时都会 302 到这里，登录后跳回 redirect 指定的页面 -->
+<form class="login-card" method="post" th:action="@{/login}">
+    <div class="brand">serviceAdmin</div>
+    <div class="sub">平台统一登录（账号数据在 userAdmin 用户中心）</div>
+
+    <!-- 登录后要跳回的页面（其他服务弹过来时带的原地址）；空值时控制器默认跳 /admin -->
+    <input type="hidden" name="redirect" th:value="${redirect}">
+
+    <div class="tip err" th:if="${error}">账号或密码错误，或账号已停用</div>
+    <div class="tip warn" th:if="${syserror}">用户中心（user-admin）不可用，请确认它已启动</div>
+
+    <label>登录账号</label>
+    <input type="text" name="username" required autofocus placeholder="如 admin">
+    <label>密码</label>
+    <input type="password" name="password" required placeholder="密码">
+
+    <button type="submit">登 录</button>
+    <div class="hint">演示账号：admin / 123456</div>
+</form>
+</body>
+</html>

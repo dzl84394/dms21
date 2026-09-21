@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=middleware 高亮 -->
+<head th:replace="~{fragments/layout :: head('中间件管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('middleware')}"></div>
+
+<main class="content">
+<h1>中间件管理</h1>
+<p class="desc">
+    维护系统依赖的中间件清单（Redis / RocketMQ / Kafka / MySQL / Nacos 等）：
+    地址、版本、环境、三类负责人。当前为占位页，具体维护能力待补充。
+</p>
+
+<div class="card">
+    <h2>中间件清单</h2>
+    <p class="muted">功能建设中：后续在此放"新增中间件"表单和清单表格（与微服务管理同一套交互风格）。</p>
+</div>
+</main>
+
+</body>
+</html>

@@ -8,7 +8,7 @@
 <main class="content">
 <h1>微服务管理</h1>
 <p class="desc">
-    流程：Eureka 上的服务<b>自动同步入库</b>（标记"待确认"）→ 人工编辑<b>中文说明</b>、下拉选业务组 →
+    流程：Eureka 上的服务<b>自动同步入库</b>（标记"待确认"）→ 人工编辑<b>中文说明</b>、下拉选业务组、补三类负责人 →
     点<b>确认固定</b>，即成为固定微服务（之后同步永不覆盖）。左侧可按业务组直达；业务组不够用时去"业务组管理"页添加。
 </p>
 
@@ -40,6 +40,9 @@
         <th>中文说明</th>
         <th>业务组</th>
         <th>系统</th>
+        <th>技术负责人</th>
+        <th>业务负责人</th>
+        <th>运维负责人</th>
         <th>状态</th>
         <th>更新时间</th>
         <th>操作</th>
@@ -48,7 +51,7 @@
     <tbody>
     <!-- result 由 ServiceGroupService.search() 返回：items/total/page/totalPages -->
     <tr th:if="${#lists.isEmpty(result['items'])}">
-        <td colspan="7" class="muted">没有匹配的记录（条件太严 / 服务还没注册上来）</td>
+        <td colspan="10" class="muted">没有匹配的记录（条件太严 / 服务还没注册上来）</td>
     </tr>
     <!-- 待确认的行浅黄底置顶（search 排序保证） -->
     <tr th:each="g : ${result['items']}" th:classappend="${g.isConfirmed()} ? '' : 'pending-row'">
@@ -75,6 +78,18 @@
         <td>
             <input type="text" name="system" th:value="${g.system}"
                    th:attr="form=${'editForm-' + g.id}">
+        </td>
+        <td>
+            <input type="text" name="techOwner" th:value="${g.techOwner}" placeholder="技术负责人"
+                   style="width:80px;" th:attr="form=${'editForm-' + g.id}">
+        </td>
+        <td>
+            <input type="text" name="bizOwner" th:value="${g.bizOwner}" placeholder="业务负责人"
+                   style="width:80px;" th:attr="form=${'editForm-' + g.id}">
+        </td>
+        <td>
+            <input type="text" name="opsOwner" th:value="${g.opsOwner}" placeholder="运维负责人"
+                   style="width:80px;" th:attr="form=${'editForm-' + g.id}">
         </td>
         <td>
             <span class="badge" th:classappend="${g.isConfirmed()} ? 'ok' : 'warn'"

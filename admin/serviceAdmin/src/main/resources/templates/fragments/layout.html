@@ -7,7 +7,9 @@
 
   用法二（左侧导航）：
     <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
-    active 参数用于高亮当前页：dashboard / services / groups
+    active 参数用于高亮当前页：
+      dashboard / groups / subsystem / services / architecture / middleware
+      gov-scheduler / gov-config / gov-gateway / gov-api（服务治理分组）
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head th:fragment="head(title, refresh)">
@@ -31,6 +33,10 @@
         .sidebar a:hover { background: #3a4250; color: #fff; }
         .sidebar a.on { background: #3742fa; color: #fff; }
         .sidebar .tree-title { font-size: 12px; color: #808a99; padding: 14px 20px 6px; }
+        /* 服务治理分组容器（小标题 tree-title 自带间距，这里只补底部留白） */
+        .sidebar .gov-nav { padding-bottom: 12px; }
+        /* 系统管理分组容器（跨服务链接：用户管理 → userAdmin） */
+        .sidebar .sys-nav { padding-bottom: 12px; }
         .sidebar .count { background: #414957; color: #c8ccd4; border-radius: 9px;
                           padding: 1px 8px; font-size: 11px; }
         .sidebar a.on .count, .sidebar a:hover .count { background: rgba(255,255,255,.25); color: #fff; }
@@ -87,8 +93,10 @@
 </head>
 
 <!--
-  左侧导航 fragment：只放功能入口（新增功能页面就在 main-nav 里加 <a>），
-  业务组不进导航，分组浏览/过滤都在"微服务管理"页的下拉里做
+  左侧导航 fragment，分两段：
+    main-nav：Eureka 查看 / 业务组管理 / 子系统管理 / 微服务管理 / 架构图管理 / 中间件管理
+    gov-nav：tree-title "服务治理" + 调度中心 / 配置中心 / 网关 / API 管理
+  新增功能页面时在对应 nav 里加 <a>，并同步更新上方的 active 取值注释
   pendingCount > 0 时在"微服务管理"旁显示待确认数量提醒
 -->
 <div class="sidebar" th:fragment="sidebar(active)">
@@ -97,13 +105,50 @@
         <a th:href="@{/admin}" th:classappend="${active == 'dashboard'} ? 'on'">
             <span>Eureka 查看</span>
         </a>
+        <a th:href="@{/admin/groups}" th:classappend="${active == 'groups'} ? 'on'">
+            <span>业务组管理</span>
+        </a>
+        <a th:href="@{/admin/subsystem}" th:classappend="${active == 'subsystem'} ? 'on'">
+            <span>子系统管理</span>
+        </a>
         <a th:href="@{/admin/services}" th:classappend="${active == 'services'} ? 'on'">
             <span>微服务管理</span>
             <span class="count" th:if="${pendingCount > 0}" th:text="${pendingCount}">0</span>
         </a>
-        <a th:href="@{/admin/groups}" th:classappend="${active == 'groups'} ? 'on'">
-            <span>业务组管理</span>
+        <a th:href="@{/admin/architecture}" th:classappend="${active == 'architecture'} ? 'on'">
+            <span>架构图管理</span>
         </a>
+        <a th:href="@{/admin/middleware}" th:classappend="${active == 'middleware'} ? 'on'">
+            <span>中间件管理</span>
+        </a>
+    </nav>
+    <!-- 系统管理分组：账号/权限体系在 userAdmin 用户中心（跨服务跳转，SSO 后 Cookie 直接生效）；
+         权限管理不单设入口——账号与权限同属 userAdmin，权限能力后续并入用户管理页 -->
+    <nav class="sys-nav">
+        <div class="tree-title">系统管理</div>
+        <a th:href="${userAdminUrl + '/admin/users'}">
+            <span>用户管理</span><span class="count">8084</span>
+        </a>
+    </nav>
+    <!-- 服务治理分组：不可点击的小标题 + 功能入口（调度/配置/网关/API） -->
+    <nav class="gov-nav">
+        <div class="tree-title">服务治理</div>
+        <a th:href="@{/admin/governance/scheduler}" th:classappend="${active == 'gov-scheduler'} ? 'on'">
+            <span>调度中心</span>
+        </a>
+        <a th:href="@{/admin/governance/config}" th:classappend="${active == 'gov-config'} ? 'on'">
+            <span>配置中心</span>
+        </a>
+        <a th:href="@{/admin/governance/gateway}" th:classappend="${active == 'gov-gateway'} ? 'on'">
+            <span>网关</span>
+        </a>
+        <a th:href="@{/admin/governance/api}" th:classappend="${active == 'gov-api'} ? 'on'">
+            <span>API 管理</span>
+        </a>
+    </nav>
+    <!-- 退出登录：清除 DMS_TOKEN Cookie（localhost 全域生效，userAdmin 一并退出） -->
+    <nav class="main-nav">
+        <a th:href="@{/logout}"><span>退出登录</span></a>
     </nav>
 </div>
 </html>

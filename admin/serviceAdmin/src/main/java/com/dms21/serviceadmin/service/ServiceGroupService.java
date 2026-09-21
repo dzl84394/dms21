@@ -12,20 +12,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 服务业务组管理：把"服务名 → 业务组/系统"映射入库（H2），支持手工维护
+ * 服务业务组管理：把"服务名 → 业务组/系统/三类负责人"映射入库（H2），支持手工维护
  *
  * 数据有两个来源：
  *   1. 自动同步：打开管理页时，把 Eureka 注册表里还没入库的服务补进来
  *      （只 INSERT 不存在的新服务，不覆盖库里已有人工维护的值）
  *   2. 人工维护：页面上手动新增/修改/删除
  *
- * 另外维护业务组字典（组编码 → 中文说明），服务映射表单的业务组从字典下拉选择
+ * 另外维护业务组字典（组编码 → 中文说明/负责人），服务映射表单的业务组从字典下拉选择
  *
  * 大盘展示规则（DashboardController）：库里有值用库里的，否则回落 Eureka metadata
  *
  * 示例：
  *   serviceGroupService.syncFromRegistry();  // 新服务自动入库
- *   serviceGroupService.upsert(null, "service-a", "hx", "fls-order"); // 新增/修改
+ *   serviceGroupService.upsert(null, "service-a", "服务A", "hx", "fls-order",
+ *           "张三", "李四", "王五", false); // 新增/修改，负责人可留空
  */
 @Service
 public class ServiceGroupService {
@@ -146,7 +147,7 @@ public class ServiceGroupService {
      * 打开管理页时调用一次，实现"服务上线后自动出现在管理列表"
      *
      * 新服务的 bizGroup/system 初值取该服务 Eureka metadata 里的配置（如 serviceA 的 hx），
-     * 没配就是空串
+     * 没配就是空串；三类负责人没有 metadata 来源，初值留空等人工补
      */
     @Transactional
     public void syncFromRegistry() {
@@ -185,14 +186,19 @@ public class ServiceGroupService {
      *   id 为空 → 新增；如果服务名已存在则改为更新那条（防止唯一约束冲突）
      *   id 非空 → 按主键更新
      *   confirm=true → 同时把该记录标记为"固定微服务"（编辑完点确认的场景）
+     *   三类负责人留空即清空（与 system 同一套 trimToEmpty 语义）
      *
      * 示例：
-     *   upsert(null, "service-a", "服务A-订单中心", "hx", "fls-order", false)  // 新增（暂不确认）
-     *   upsert(1L, "service-a", "服务A-订单中心", "hx", "fls-order", true)     // 编辑并确认固定
+     *   upsert(null, "service-a", "服务A-订单中心", "hx", "fls-order",
+     *          "张三", "李四", "王五", false)  // 新增（暂不确认），负责人可留空
+     *   upsert(1L, "service-a", "服务A-订单中心", "hx", "fls-order",
+     *          "张三", "李四", "王五", true)   // 编辑并确认固定
      */
     @Transactional
     public ServiceGroupEntity upsert(Long id, String serviceName, String serviceNameCn,
-                                     String bizGroup, String system, boolean confirm) {
+                                     String bizGroup, String system,
+                                     String techOwner, String bizOwner, String opsOwner,
+                                     boolean confirm) {
         ServiceGroupEntity entity;
         if (id != null) {
             // 按主键改
@@ -210,6 +216,9 @@ public class ServiceGroupService {
         entity.setServiceNameCn(trimToEmpty(serviceNameCn));
         entity.setBizGroup(trimToEmpty(bizGroup));
         entity.setSystem(trimToEmpty(system));
+        entity.setTechOwner(trimToEmpty(techOwner));
+        entity.setBizOwner(trimToEmpty(bizOwner));
+        entity.setOpsOwner(trimToEmpty(opsOwner));
         if (confirm) {
             // 人工确认 → 固定为正式微服务（之后 sync 也绝不会覆盖这条记录）
             entity.setConfirmed(true);
@@ -248,14 +257,16 @@ public class ServiceGroupService {
     }
 
     /**
-     * 新增/修改业务组字典（按 groupCode 判定：已存在则更新中文名，否则新增）
+     * 新增/修改业务组字典（按 groupCode 判定：已存在则更新中文说明和负责人，否则新增）
+     * 负责人留空即清空
      *
      * 示例：
-     *   saveDict("hx", "华信业务线")          // 新增
-     *   saveDict("hx", "华信（改名后）")      // 更新中文名
+     *   saveDict("hx", "华信业务线", "张三", "李四", "王五")   // 新增
+     *   saveDict("hx", "华信（改名后）", "张三三", null, null) // 更新中文名和技术负责人
      */
     @Transactional
-    public BizGroupDictEntity saveDict(String groupCode, String groupName) {
+    public BizGroupDictEntity saveDict(String groupCode, String groupName,
+                                       String techOwner, String bizOwner, String opsOwner) {
         String code = trimToEmpty(groupCode);
         if (code.isEmpty()) {
             throw new IllegalArgumentException("组编码不能为空");
@@ -264,6 +275,9 @@ public class ServiceGroupService {
                 .orElseGet(BizGroupDictEntity::new);
         entity.setGroupCode(code);
         entity.setGroupName(trimToEmpty(groupName));
+        entity.setTechOwner(trimToEmpty(techOwner));
+        entity.setBizOwner(trimToEmpty(bizOwner));
+        entity.setOpsOwner(trimToEmpty(opsOwner));
         return dictRepository.save(entity);
     }
 

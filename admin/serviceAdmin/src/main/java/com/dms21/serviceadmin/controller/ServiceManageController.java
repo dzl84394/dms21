@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  *       &status=pending    状态过滤：pending=待确认 / confirmed=已固定
  *       &page=2            页码（每页 20 条）
  * 操作（纯表单 POST，PRG 模式防重复提交，无前端 JS）：
- *   POST /admin/services/save          编辑中文说明/业务组/系统（confirm=true 同时确认固定）
+ *   POST /admin/services/save          编辑中文说明/业务组/系统/三类负责人（confirm=true 同时确认固定）
  *   POST /admin/services/delete/{id}   删除
  *
  * 每次打开页面先 syncFromRegistry()：Eureka 里新上线的服务自动补进库（人工改过的不动）
@@ -62,12 +62,14 @@ public class ServiceManageController {
     }
 
     /**
-     * 保存服务映射（编辑中文说明/业务组/系统）
+     * 保存服务映射（编辑中文说明/业务组/系统/三类负责人）
      * confirm=true 时（"确认固定"按钮）同时把该微服务标记为固定
+     * 负责人留空即清空
      *
      * 示例：curl -X POST "http://localhost:8083/admin/services/save?confirm=true" \
      *         -d "id=1" -d "serviceName=service-a" \
-     *         -d "serviceNameCn=服务A-订单中心" -d "bizGroup=hx" -d "system=fls-order"
+     *         -d "serviceNameCn=服务A-订单中心" -d "bizGroup=hx" -d "system=fls-order" \
+     *         -d "techOwner=张三" -d "bizOwner=李四" -d "opsOwner=王五"
      * 返回：302 重定向回管理页（Post-Redirect-Get）
      */
     @PostMapping("/save")
@@ -76,8 +78,12 @@ public class ServiceManageController {
                        @RequestParam(required = false) String serviceNameCn,
                        @RequestParam(required = false) String bizGroup,
                        @RequestParam(required = false) String system,
+                       @RequestParam(required = false) String techOwner,
+                       @RequestParam(required = false) String bizOwner,
+                       @RequestParam(required = false) String opsOwner,
                        @RequestParam(defaultValue = "false") boolean confirm) {
-        serviceGroupService.upsert(id, serviceName, serviceNameCn, bizGroup, system, confirm);
+        serviceGroupService.upsert(id, serviceName, serviceNameCn, bizGroup, system,
+                techOwner, bizOwner, opsOwner, confirm);
         return "redirect:/admin/services";
     }
 

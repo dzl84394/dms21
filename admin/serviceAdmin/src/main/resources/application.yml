@@ -28,6 +28,18 @@ spring:
 sba:
   url: http://localhost:8080
 
+# SSO 认证配置：本服务是统一登录门户，登录成功后签发 DMS_TOKEN Cookie
+# （localhost 下全端口共享，userAdmin 等服务直接验签放行）
+# secret 必须与 userAdmin 一致；token-expire-hours 为令牌有效期（小时）
+auth:
+  secret: dms21-sso-secret-2026
+  cookie-name: DMS_TOKEN
+  token-expire-hours: 12
+
+# userAdmin 页面地址：侧边栏"用户管理"跨服务跳转用（登录后 Cookie 直接生效）
+useradmin:
+  url: http://localhost:8084
+
 # 注册到 Eureka（baseDemo/eureka）
 eureka:
   client:

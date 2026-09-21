@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=gov-api 高亮 -->
+<head th:replace="~{fragments/layout :: head('API 管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('gov-api')}"></div>
+
+<main class="content">
+<h1>API 管理</h1>
+<p class="desc">
+    接口统一管理：接口清单、所属服务/分组、请求方式与路径、文档、发布状态。
+    当前为占位页，具体维护能力待补充。
+</p>
+
+<div class="card">
+    <h2>接口清单</h2>
+    <p class="muted">功能建设中：后续在此放接口表格（路径、方法、所属服务、分组、状态、文档链接）。</p>
+</div>
+</main>
+
+</body>
+</html>

@@ -10,11 +10,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * 业务组管理页（业务组字典：组编码 + 中文说明）
+ * 业务组管理页（业务组字典：组编码 + 中文说明 + 三类负责人）
  *
  * 页面：GET  http://localhost:8083/admin/groups
  * 操作（纯表单 POST，PRG 模式防重复提交，无前端 JS）：
- *   POST /admin/groups/dict/save          新增/修改组（编码已存在则更新中文名）
+ *   POST /admin/groups/dict/save          新增/修改组（编码已存在则更新说明和负责人）
  *   POST /admin/groups/dict/delete/{id}   删除组（不影响服务映射记录）
  *
  * 页面上同时展示每个组下的服务数；微服务与组的分配在"微服务管理"页（/admin/services）
@@ -43,16 +43,21 @@ public class GroupController {
     }
 
     /**
-     * 新增/修改业务组字典（组编码 + 中文说明；编码已存在则更新其中文名）
+     * 新增/修改业务组字典（组编码 + 中文说明 + 三类负责人；编码已存在则更新）
+     * 负责人留空即清空
      *
      * 示例：curl -X POST http://localhost:8083/admin/groups/dict/save \
-     *         -d "groupCode=hx" -d "groupName=华信业务线"
+     *         -d "groupCode=hx" -d "groupName=华信业务线" \
+     *         -d "techOwner=张三" -d "bizOwner=李四" -d "opsOwner=王五"
      * 返回：302 重定向回管理页
      */
     @PostMapping("/dict/save")
     public String saveDict(@RequestParam String groupCode,
-                           @RequestParam(required = false) String groupName) {
-        serviceGroupService.saveDict(groupCode, groupName);
+                           @RequestParam(required = false) String groupName,
+                           @RequestParam(required = false) String techOwner,
+                           @RequestParam(required = false) String bizOwner,
+                           @RequestParam(required = false) String opsOwner) {
+        serviceGroupService.saveDict(groupCode, groupName, techOwner, bizOwner, opsOwner);
         return "redirect:/admin/groups";
     }
 

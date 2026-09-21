@@ -1,6 +1,7 @@
 package com.dms21.serviceadmin.controller;
 
 import com.dms21.serviceadmin.service.ServiceGroupService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -18,6 +19,10 @@ public class SidebarAdvice {
 
     private final ServiceGroupService serviceGroupService;
 
+    /** userAdmin 页面地址（yml: useradmin.url），侧边栏跨服务跳转"用户管理"用 */
+    @Value("${useradmin.url:http://localhost:8084}")
+    private String userAdminUrl;
+
     public SidebarAdvice(ServiceGroupService serviceGroupService) {
         this.serviceGroupService = serviceGroupService;
     }
@@ -34,5 +39,11 @@ public class SidebarAdvice {
     @ModelAttribute("noneGroup")
     public String noneGroup() {
         return NONE_GROUP;
+    }
+
+    /** userAdmin 地址，侧边栏"用户管理"跨服务链接用（SSO 已打通，Cookie 直接生效） */
+    @ModelAttribute("userAdminUrl")
+    public String userAdminUrl() {
+        return userAdminUrl;
     }
 }
