@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=roles 高亮 -->
+<head th:replace="~{fragments/layout :: head('角色表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('roles')}"></div>
+
+<main class="content">
+<!--
+    新建/编辑共用的角色表单（/admin/roles/form）
+    role == null → 新建：编码可填、子系统可选（默认 admin）
+    role != null → 编辑：编码只读、子系统锁定（授权资源只来自同一子系统）
+    下方资源树复选 = 给角色分配权限点，保存时全量重建
+-->
+<h1 th:text="${role != null} ? '编辑角色：' + ${role.roleName} : '新增角色'">新增角色</h1>
+<p class="desc" th:if="${role != null}">
+    角色编码和所属子系统创建后<b>不建议修改</b>（子系统决定可分配哪些资源）；
+    下方勾选资源即授权，一个都不勾 = 空权限角色。
+</p>
+<p class="desc" th:if="${role == null}">
+    角色归属于某个<b>子系统</b>，只能给它分配同子系统的资源。内置编码 admin（管理员）/ user（普通用户）。
+</p>
+
+<div class="card">
+    <form method="post" th:action="@{/admin/roles/save}">
+        <input type="hidden" name="id" th:value="${role?.id}">
+        <table style="max-width:560px;">
+            <tr>
+                <td style="width:110px;">角色编码 <span th:if="${role == null}" style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="roleCode" required th:value="${role?.roleCode}"
+                           th:readonly="${role != null}" placeholder="如 admin / viewer / risk-admin"
+                           style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>角色名称 <span style="color:#ff6b81;">*</span></td>
+                <td><input type="text" name="roleName" required th:value="${role?.roleName}"
+                           placeholder="如 系统管理员 / 风控专员" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>所属子系统 <span th:if="${role == null}" style="color:#ff6b81;">*</span></td>
+                <td th:if="${role == null}">
+                    <!-- 新建：datalist 可选已上线子系统，也可输入新子系统编码（如 risk/finance） -->
+                    <input type="text" name="subsystem" list="subsystemOptions"
+                           th:value="${formSubsystem}" placeholder="如 admin / demo / risk" style="width:100%;">
+                    <datalist id="subsystemOptions">
+                        <option th:each="s : ${subsystems}" th:value="${s}"></option>
+                    </datalist>
+                </td>
+                <td th:if="${role != null}">
+                    <!-- 编辑：子系统锁定，仍用 hidden 把原值回传给后端 -->
+                    <input type="hidden" name="subsystem" th:value="${formSubsystem}">
+                    <span class="badge gray" th:text="${formSubsystem}">admin</span>
+                    <span class="muted" style="font-size:11px;">（创建后不可改）</span>
+                </td>
+            </tr>
+            <tr>
+                <td>排序</td>
+                <td>
+                    <input type="number" name="sort"
+                           th:value="${role?.sort != null} ? ${role.sort} : 0" min="0" style="width:100px;">
+                    <span class="muted" style="font-size:11px;">数字小的排在前面</span>
+                </td>
+            </tr>
+            <tr>
+                <td>状态</td>
+                <td>
+                    <label class="chk"><input type="checkbox" name="enabled"
+                           th:checked="${role == null or role.isEnabled()}">启用（停用后该角色不再授予权限）</label>
+                </td>
+            </tr>
+            <tr>
+                <td>备注</td>
+                <td><input type="text" name="remark" th:value="${role?.remark}"
+                           placeholder="可选说明" style="width:100%;"></td>
+            </tr>
+        </table>
+
+        <!-- 资源授权：只列同子系统资源，按菜单层级缩进；MENU/BUTTON/API 用徽章区分 -->
+        <h2 style="font-size:14px;margin:16px 0 8px;">分配资源（权限点）</h2>
+        <div style="max-height:320px;overflow:auto;border:1px solid #e3e6eb;
+                    border-radius:6px;padding:8px 10px;">
+            <div class="muted" th:if="${#lists.isEmpty(resourceTree)}">
+                该子系统下还没有资源，先到「资源管理」创建（子系统：<span th:text="${formSubsystem}">admin</span>）
+            </div>
+            <label class="chk" th:each="n : ${resourceTree}"
+                   th:style="'display:block;margin-left:' + ${n.depth * 20} + 'px;'">
+                <input type="checkbox" name="resourceIds" th:value="${n.resource.id}"
+                       th:checked="${selectedResourceIds.contains(n.resource.id)}">
+                <span th:text="${n.resource.resName}">用户管理</span>
+                <span class="muted" th:text="' ' + ${n.resource.resCode}">user:menu</span>
+                <span class="badge gray" style="font-size:10px;padding:0 6px;margin-left:4px;"
+                      th:text="${n.resource.resType == 'MENU'} ? '菜单' : (${n.resource.resType == 'BUTTON'} ? '按钮' : '接口')">菜单</span>
+            </label>
+        </div>
+
+        <div class="toolbar" style="margin-top:14px;">
+            <button type="submit" th:text="${role != null} ? '保存修改' : '创建角色'">创建角色</button>
+            <a th:href="@{/admin/roles}" style="color:#808a99;">取消返回列表</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

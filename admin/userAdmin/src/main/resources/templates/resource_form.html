@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=resources 高亮 -->
+<head th:replace="~{fragments/layout :: head('资源表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('resources')}"></div>
+
+<main class="content">
+<!--
+    新建/编辑共用的资源表单（/admin/resources/form）
+    resource == null → 新建：编码可填、子系统可选（默认 admin）
+    resource != null → 编辑：编码只读、子系统锁定；上级菜单候选剔除自己子树且限同子系统
+-->
+<h1 th:text="${resource != null} ? '编辑资源：' + ${resource.resName} : '新增资源'">新增资源</h1>
+<p class="desc" th:if="${resource == null}">
+    菜单（MENU）一般作为顶级或上级；按钮/接口通常把上级选为所属菜单。资源编码建议
+    <code>模块:操作</code>，如 <code>user:list</code>、<code>risk:approve</code>。
+</p>
+
+<div class="card">
+    <form method="post" th:action="@{/admin/resources/save}">
+        <input type="hidden" name="id" th:value="${resource?.id}">
+        <table style="max-width:560px;">
+            <tr>
+                <td style="width:110px;">资源编码 <span th:if="${resource == null}" style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="resCode" required th:value="${resource?.resCode}"
+                           th:readonly="${resource != null}" placeholder="如 user:delete / risk:approve"
+                           style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>资源名称 <span style="color:#ff6b81;">*</span></td>
+                <td><input type="text" name="resName" required th:value="${resource?.resName}"
+                           placeholder="如 删除用户 / 风控审批" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>资源类型</td>
+                <td>
+                    <select name="resType" style="width:100%;">
+                        <option value="MENU" th:selected="${resource == null or resource.resType == 'MENU'}">菜单（页面）</option>
+                        <option value="BUTTON" th:selected="${resource?.resType == 'BUTTON'}">按钮（操作）</option>
+                        <option value="API" th:selected="${resource?.resType == 'API'}">接口（后端权限点）</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>所属子系统 <span th:if="${resource == null}" style="color:#ff6b81;">*</span></td>
+                <td th:if="${resource == null}">
+                    <input type="text" name="subsystem" list="subsystemOptions"
+                           th:value="${formSubsystem}" placeholder="如 admin / demo / risk" style="width:100%;">
+                    <datalist id="subsystemOptions">
+                        <option th:each="s : ${subsystems}" th:value="${s}"></option>
+                    </datalist>
+                </td>
+                <td th:if="${resource != null}">
+                    <input type="hidden" name="subsystem" th:value="${formSubsystem}">
+                    <span class="badge gray" th:text="${formSubsystem}">admin</span>
+                    <span class="muted" style="font-size:11px;">（创建后不可改）</span>
+                </td>
+            </tr>
+            <tr>
+                <td>上级资源</td>
+                <td>
+                    <select name="parentId" style="width:100%;">
+                        <option value="" th:selected="${resource?.parentId == null}">（作为顶级资源）</option>
+                        <!-- 树形候选：编辑时不含自己及子孙，只列同子系统资源 -->
+                        <option th:each="n : ${options}" th:value="${n.resource.id}"
+                                th:text="${#strings.repeat('　', n.depth)} + (${n.depth > 0} ? '└ ' : '') + ${n.resource.resName} + '（' + ${n.resource.resCode} + '）'"
+                                th:selected="${resource?.parentId == n.resource.id}">用户管理（user:menu）</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>路径</td>
+                <td><input type="text" name="path" th:value="${resource?.path}"
+                           placeholder="菜单如 /admin/users；按钮可留空" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>排序</td>
+                <td>
+                    <input type="number" name="sort"
+                           th:value="${resource?.sort != null} ? ${resource.sort} : 0" min="0" style="width:100px;">
+                    <span class="muted" style="font-size:11px;">数字小的排在前面</span>
+                </td>
+            </tr>
+            <tr>
+                <td>状态</td>
+                <td>
+                    <label class="chk"><input type="checkbox" name="enabled"
+                           th:checked="${resource == null or resource.isEnabled()}">启用（停用后不再可被授权/鉴权）</label>
+                </td>
+            </tr>
+        </table>
+        <div class="toolbar" style="margin-top:14px;">
+            <button type="submit" th:text="${resource != null} ? '保存修改' : '创建资源'">创建资源</button>
+            <a th:href="@{/admin/resources}" style="color:#808a99;">取消返回列表</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

@@ -8,7 +8,7 @@
 
   用法二（左侧导航）：
     <div th:replace="~{fragments/layout :: sidebar('users')}"></div>
-    active 参数用于高亮当前页：users（后续新增功能再补充）
+    active 参数用于高亮当前页：users / dept / roles / resources
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head th:fragment="head(title, refresh)">
@@ -88,6 +88,12 @@
         </a>
         <a th:href="@{/admin/depts}" th:classappend="${active == 'dept'} ? 'on'">
             <span>部门管理</span>
+        </a>
+        <a th:href="@{/admin/roles}" th:classappend="${active == 'roles'} ? 'on'">
+            <span>角色管理</span>
+        </a>
+        <a th:href="@{/admin/resources}" th:classappend="${active == 'resources'} ? 'on'">
+            <span>资源管理</span>
         </a>
     </nav>
     <!-- 返回主服务：跳回 serviceAdmin 首页（SSO 已打通，Cookie 全域生效免登录） -->

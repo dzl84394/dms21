@@ -8,14 +8,66 @@
 <main class="content">
 <h1>中间件管理</h1>
 <p class="desc">
-    维护系统依赖的中间件清单（Redis / RocketMQ / Kafka / MySQL / Nacos 等）：
-    地址、版本、环境、三类负责人。当前为占位页，具体维护能力待补充。
+    中间件与微服务<b>同表存储</b>（t_service_group），靠<b>大类</b>字段区分：微服务页只展示"业务服务"，
+    本页展示数据库 / MQ / 非关系数据库 / 流量网关 / 接口网关 / 注册配置中心 / 其他中间件。
+    新增和编辑走<b>独立表单页</b>（本页只展示），扩展信息用每行的"扩展"入口单独编辑。
+    <a th:href="@{/admin/middleware/form}" style="color:#3742fa;">+ 新增中间件</a>
 </p>
 
-<div class="card">
-    <h2>中间件清单</h2>
-    <p class="muted">功能建设中：后续在此放"新增中间件"表单和清单表格（与微服务管理同一套交互风格）。</p>
-</div>
+<!-- 大类过滤：GET 表单，条件改变后点过滤即生效 -->
+<form method="get" action="/admin/middleware" class="toolbar">
+    <input type="text" name="q" th:value="${q}" placeholder="搜名称 / 中文说明" style="width:180px;">
+    <select name="category">
+        <option value="">全部中间件</option>
+        <option th:each="cat : ${categories.keySet()}" th:value="${cat}" th:text="${cat}"
+                th:selected="${category == cat}">数据库</option>
+    </select>
+    <button type="submit">过滤</button>
+    <a th:href="@{/admin/middleware}" th:if="${q != '' or category != ''}" style="color:#3742fa;">清除条件</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>名称</th>
+        <th>中文说明</th>
+        <th>大类</th>
+        <th>小类</th>
+        <th>技术负责人</th>
+        <th>业务负责人</th>
+        <th>运维负责人</th>
+        <th>扩展信息</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- result 由 ServiceGroupService.search() 返回（category=middleware 或具体大类，不分页） -->
+    <tr th:if="${#lists.isEmpty(result['items'])}">
+        <td colspan="10" class="muted">还没有中间件，点上方"新增中间件"录入第一条（如 mysql-prod / 生产 MySQL 集群 / 数据库）</td>
+    </tr>
+    <tr th:each="g : ${result['items']}">
+        <td><b th:text="${g.serviceName}">mysql-prod</b></td>
+        <td th:text="${g.serviceNameCn != null and !g.serviceNameCn.isEmpty()} ? ${g.serviceNameCn} : '-'">生产MySQL集群</td>
+        <td th:text="${g.category}">数据库</td>
+        <td th:text="${g.subCategory != null and !g.subCategory.isEmpty()} ? ${g.subCategory} : '-'">MySQL</td>
+        <td th:text="${g.techOwner != null and !g.techOwner.isEmpty()} ? ${g.techOwner} : '-'">张三</td>
+        <td th:text="${g.bizOwner != null and !g.bizOwner.isEmpty()} ? ${g.bizOwner} : '-'">李四</td>
+        <td th:text="${g.opsOwner != null and !g.opsOwner.isEmpty()} ? ${g.opsOwner} : '-'">王五</td>
+        <td class="muted" th:text="${g.extSummary}">主机地址=10.0.0.1, 端口=3306</td>
+        <td class="muted" th:text="${g.updatedAt != null} ? ${#temporals.format(g.updatedAt, 'MM-dd HH:mm')} : '-'">09-23 21:00</td>
+        <td class="inline-form">
+            <a th:href="@{/admin/middleware/form(id=${g.id})}" style="color:#3742fa;">编辑</a>
+            <!-- 扩展信息编辑：跳独立表单页（字段结构按大类预制，列表页放不下） -->
+            <a th:href="@{'/admin/middleware/ext/' + ${g.id}}" style="color:#3742fa;">扩展</a>
+            <!-- 删除：每行独立小 form（无 JS，POST 提交防误触发） -->
+            <form method="post" th:action="@{'/admin/middleware/delete/' + ${g.id}}" style="display:inline;">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
 </main>
 
 </body>

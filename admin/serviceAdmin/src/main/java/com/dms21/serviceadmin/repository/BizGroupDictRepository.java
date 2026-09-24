@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 业务组字典的数据库访问层
+ * 业务领域字典的数据库访问层
  *
  * 示例：
  *   dictRepo.findByGroupCode("hx")     // 组编码是否已存在

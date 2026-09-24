@@ -28,7 +28,7 @@ import java.util.TreeSet;
  *
  * 访问：GET http://localhost:8083/admin
  *       ?q=订单              关键字（服务名/中文说明）
- *       &bizGroup=xw&bizGroup=hx   业务组过滤（可多选）
+ *       &bizGroup=xw&bizGroup=hx   业务领域过滤（可多选）
  *       &page=2              页码（每页 PAGE_SIZE 个服务）
  * 页面通过 <meta http-equiv="refresh"> 每 30 秒自动刷新
  */
@@ -51,7 +51,7 @@ public class DashboardController {
     }
 
     /**
-     * 组装服务清单：注册表（本地缓存）→ 按业务组/关键字过滤 → 分页
+     * 组装服务清单：注册表（本地缓存）→ 按业务领域/关键字过滤 → 分页
      * 不发任何 actuator 请求，1000 个服务也是毫秒级渲染
      *
      * 示例：浏览器打开 http://localhost:8083/admin
@@ -62,11 +62,11 @@ public class DashboardController {
                             @RequestParam(required = false, defaultValue = "") String q,
                             @RequestParam(defaultValue = "1") int page,
                             Model model) {
-        // 库里的"服务名→业务组"映射（一次查全表），展示以人工维护的库数据优先
+        // 库里的"服务名→业务领域"映射（一次查全表），展示以人工维护的库数据优先
         Map<String, ServiceGroupEntity> groupMap = serviceGroupService.groupMap();
-        // 业务组字典：编码 → 中文说明，业务组列显示"编码·中文名"
+        // 业务领域字典：编码 → 中文说明，业务领域列显示"编码·中文名"
         Map<String, String> dictNames = serviceGroupService.dictNameMap();
-        // 已选中的业务组过滤条件；未选任何组 = 显示全部
+        // 已选中的业务领域过滤条件；未选任何组 = 显示全部
         Set<String> selectedGroups = (bizGroup == null || bizGroup.isEmpty())
                 ? Set.of() : new HashSet<>(bizGroup);
         String needle = q == null ? "" : q.trim().toLowerCase();
@@ -82,11 +82,11 @@ public class DashboardController {
             List<?> instances = svc.get("instances") instanceof List<?> list ? list : List.of();
             totalInstances += instances.size();
 
-            // 业务组：库优先，否则该服务第一个实例的 Eureka metadata
+            // 业务领域：库优先，否则该服务第一个实例的 Eureka metadata
             String group = resolveServiceField(name, instances, groupMap, "bizGroup");
             allGroups.add(group);
 
-            // 过滤：业务组多选 + 关键字（服务名/中文说明）
+            // 过滤：业务领域多选 + 关键字（服务名/中文说明）
             if (!selectedGroups.isEmpty() && !selectedGroups.contains(group)) {
                 continue;
             }
@@ -105,9 +105,9 @@ public class DashboardController {
             // 微服务中文说明：库里确认过的映射里取（没填显示空）
             row.put("serviceCn", cn);
             row.put("bizGroup", group);
-            // 中文说明：来自业务组字典，页面上显示"编码·中文名"
+            // 中文说明：来自业务领域字典，页面上显示"编码·中文名"
             row.put("bizGroupName", dictNames.getOrDefault(group, ""));
-            row.put("system", resolveServiceField(name, instances, groupMap, "system"));
+            row.put("subsystem", resolveServiceField(name, instances, groupMap, "subsystem"));
             row.put("instanceCount", instances.size());
             row.put("status", status);
             // 状态详情跳 Spring Boot Admin：SBA 实例页按 serviceId 过滤
@@ -172,7 +172,7 @@ public class DashboardController {
                                        Map<String, ServiceGroupEntity> groupMap, String field) {
         ServiceGroupEntity entity = groupMap.get(service.toLowerCase());
         if (entity != null) {
-            String value = "bizGroup".equals(field) ? entity.getBizGroup() : entity.getSystem();
+            String value = "bizGroup".equals(field) ? entity.getBizGroup() : entity.getSubsystem();
             if (value != null && !value.isBlank()) {
                 return value;
             }

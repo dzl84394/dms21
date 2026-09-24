@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: service-b # Eureka 中的服务名，serviceA 用 "http://service-b" 调用它
+    name: service-b # Eureka 中的服务名
 
 # 注册到 Eureka
 eureka:
@@ -16,8 +16,8 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     metadata-map:
-      bizGroup: xw
-      system: fls-user
+      bizGroup: demo
+      subsystem: demo
     prefer-ip-address: true
 # Actuator 端点配置
 # health: 显示完整健康详情（含磁盘、ping、eureka 等）

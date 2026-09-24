@@ -16,7 +16,7 @@
     登录账号创建后<b>不允许修改</b>；密码框留空 = 保留原密码。
 </p>
 <p class="desc" th:if="${user == null}">
-    登录账号全局唯一；角色 admin 可管理本系统全部数据。
+    登录账号全局唯一；系统角色<b>按子系统分别授权</b>——在哪个子系统勾了角色，才能在那个子系统操作。
 </p>
 
 <div class="card">
@@ -47,12 +47,62 @@
                            placeholder="如 张三" style="width:100%;"></td>
             </tr>
             <tr>
-                <td>角色</td>
+                <td>所属公司</td>
                 <td>
-                    <select name="role" style="width:100%;">
-                        <option value="user" th:selected="${user?.role == 'user'}">普通用户</option>
-                        <option value="admin" th:selected="${user?.role == 'admin'}">管理员</option>
-                    </select>
+                    <!-- 多租户隔离字段：datalist 可选已有公司，也可输入新公司名（保存后自动进选项清单） -->
+                    <input type="text" name="tenant" list="tenantOptions" th:value="${preselectTenant}"
+                           placeholder="如 默认公司 / 子公司A" style="width:100%;">
+                    <datalist id="tenantOptions">
+                        <option th:each="t : ${tenants}" th:value="${t}"></option>
+                    </datalist>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    系统角色
+                    <div class="muted" style="font-size:11px;">按子系统授权</div>
+                </td>
+                <td>
+                    <!-- 角色按子系统分组：同一个用户在不同子系统可授不同角色；
+                         在某子系统一个都不勾 = 在该子系统无任何权限 -->
+                    <div th:if="${#maps.isEmpty(roleGroups)}" class="muted">
+                        还没有角色，先到「角色管理」创建
+                    </div>
+                    <div th:each="group : ${roleGroups}" style="margin-bottom:8px;">
+                        <div class="muted" style="font-size:11px;margin-bottom:2px;"
+                             th:text="'子系统：' + ${group.key}">子系统：admin</div>
+                        <label class="chk" th:each="r : ${group.value}" style="display:block;margin-left:8px;">
+                            <input type="checkbox" name="roleIds" th:value="${r.id}"
+                                   th:checked="${selectedRoleIds.contains(r.id)}">
+                            <span th:text="${r.roleName}">系统管理员</span>
+                            <span class="muted" th:text="'（' + ${r.roleCode} + '）'">（admin）</span>
+                            <span class="badge gray" style="font-size:10px;padding:0 6px;"
+                                  th:if="${!r.isEnabled()}">停用</span>
+                        </label>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    部门（可多选）
+                    <div class="muted" style="font-size:11px;">一人可挂多岗</div>
+                </td>
+                <td>
+                    <!-- 部门 checkbox 多选：只列同公司（预填公司）的部门，树形缩进；保存时全量重建关系 -->
+                    <div style="max-height:160px;overflow:auto;border:1px solid #e3e6eb;
+                                border-radius:6px;padding:8px 10px;">
+                        <div class="muted" th:if="${#lists.isEmpty(deptTree)}">
+                            该公司下还没有部门，先到「部门管理」创建
+                        </div>
+                        <label class="chk" th:each="n : ${deptTree}"
+                               th:style="'display:block;margin-left:' + ${n.depth * 20} + 'px;'">
+                            <input type="checkbox" name="deptIds" th:value="${n.dept.id}"
+                                   th:checked="${selectedDeptIds.contains(n.dept.id)}">
+                            <span th:text="${n.dept.deptName}">研发部</span>
+                            <span class="muted" th:text="'（' + ${n.dept.effectiveTenant()} + '）'"
+                                  th:if="${n.dept.effectiveTenant() != preselectTenant}"></span>
+                        </label>
+                    </div>
                 </td>
             </tr>
             <tr>

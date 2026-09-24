@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
- * 业务组管理页（业务组字典：组编码 + 中文说明 + 三类负责人）
+ * 业务领域管理页（业务领域字典：组编码 + 中文说明 + 三类负责人）
  *
  * 页面：GET  http://localhost:8083/admin/groups
  * 操作（纯表单 POST，PRG 模式防重复提交，无前端 JS）：
@@ -30,20 +30,23 @@ public class GroupController {
     }
 
     /**
-     * 业务组管理页：字典列表 + 各组服务数
+     * 业务领域管理页：字典列表 + 各组服务数
      *
      * 示例：浏览器打开 http://localhost:8083/admin/groups
      * 返回：groups.html（纯字典维护，服务映射在 /admin/services）
      */
     @GetMapping
     public String page(Model model) {
+        // 从 Eureka 同步服务映射（含 bizGroup/subsystem metadata），再扫描去重到字典
+        serviceGroupService.syncFromRegistry();
+        serviceGroupService.syncBizGroupsFromMappings();
         model.addAttribute("dicts", serviceGroupService.listDict());
         model.addAttribute("groupCounts", serviceGroupService.countByGroup());
         return "groups"; // 对应 templates/groups.html
     }
 
     /**
-     * 新增/修改业务组字典（组编码 + 中文说明 + 三类负责人；编码已存在则更新）
+     * 新增/修改业务领域字典（组编码 + 中文说明 + 三类负责人；编码已存在则更新）
      * 负责人留空即清空
      *
      * 示例：curl -X POST http://localhost:8083/admin/groups/dict/save \
@@ -62,7 +65,7 @@ public class GroupController {
     }
 
     /**
-     * 删除业务组字典（只删字典，不影响已配置的服务映射）
+     * 删除业务领域字典（只删字典，不影响已配置的服务映射）
      *
      * 示例：curl -X POST http://localhost:8083/admin/groups/dict/delete/2
      * 返回：302 重定向回管理页

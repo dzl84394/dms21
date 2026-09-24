@@ -94,7 +94,7 @@
 
 <!--
   左侧导航 fragment，分两段：
-    main-nav：Eureka 查看 / 业务组管理 / 子系统管理 / 微服务管理 / 架构图管理 / 中间件管理
+    main-nav：Eureka 查看 / 业务领域管理 / 子系统管理 / 微服务管理 / 架构图管理 / 中间件管理
     gov-nav：tree-title "服务治理" + 调度中心 / 配置中心 / 网关 / API 管理
   新增功能页面时在对应 nav 里加 <a>，并同步更新上方的 active 取值注释
   pendingCount > 0 时在"微服务管理"旁显示待确认数量提醒
@@ -106,7 +106,7 @@
             <span>Eureka 查看</span>
         </a>
         <a th:href="@{/admin/groups}" th:classappend="${active == 'groups'} ? 'on'">
-            <span>业务组管理</span>
+            <span>业务领域管理</span>
         </a>
         <a th:href="@{/admin/subsystem}" th:classappend="${active == 'subsystem'} ? 'on'">
             <span>子系统管理</span>
@@ -122,12 +122,17 @@
             <span>中间件管理</span>
         </a>
     </nav>
-    <!-- 系统管理分组：账号/权限体系在 userAdmin 用户中心（跨服务跳转，SSO 后 Cookie 直接生效）；
-         权限管理不单设入口——账号与权限同属 userAdmin，权限能力后续并入用户管理页 -->
+    <!-- 系统管理分组：账号/角色/资源（权限）都在 userAdmin 用户中心（跨服务跳转，SSO 后 Cookie 直接生效） -->
     <nav class="sys-nav">
         <div class="tree-title">系统管理</div>
         <a th:href="${userAdminUrl + '/admin/users'}">
             <span>用户管理</span><span class="count">8084</span>
+        </a>
+        <a th:href="${userAdminUrl + '/admin/roles'}">
+            <span>角色管理</span><span class="count">8084</span>
+        </a>
+        <a th:href="${userAdminUrl + '/admin/resources'}">
+            <span>资源管理</span><span class="count">8084</span>
         </a>
     </nav>
     <!-- 服务治理分组：不可点击的小标题 + 功能入口（调度/配置/网关/API） -->

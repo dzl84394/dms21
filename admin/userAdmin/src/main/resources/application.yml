@@ -45,7 +45,7 @@ eureka:
     prefer-ip-address: true
     metadata-map:
       bizGroup: platform # 归平台业务组，serviceAdmin 大盘可展示/过滤
-      system: user-admin
+      subsystem: admin
 # Actuator 端点配置（与 serviceAdmin 一致）
 # health: 健康详情；httpexchanges: 最近 100 次 HTTP 请求跟踪
 management:

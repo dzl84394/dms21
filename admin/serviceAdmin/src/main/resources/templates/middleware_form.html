@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=middleware 高亮 -->
+<head th:replace="~{fragments/layout :: head('中间件表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('middleware')}"></div>
+
+<main class="content">
+<!-- 共用表单：mw 为 null 是新增模式，非空是编辑模式（名称只读） -->
+<h1 th:text="${mw == null} ? '新增中间件' : '编辑中间件 — ' + ${mw.serviceName}">新增中间件</h1>
+<p class="desc">
+    中间件与微服务同表存储（t_service_group），靠大类字段区分页面归属。
+    <span th:if="${mw != null}">编辑扩展信息请保存后使用列表页的"扩展"入口。</span>
+    <span th:if="${mw == null}">大类必填，决定它在中间件页的分组展示；保存后可用"扩展"录入专有属性。</span>
+</p>
+
+<div class="card">
+    <form method="post" action="/admin/middleware/save">
+        <input type="hidden" name="id" th:if="${mw != null}" th:value="${mw.id}">
+
+        <table>
+            <tbody>
+            <tr>
+                <td>名称（唯一）</td>
+                <td>
+                    <!-- 编辑模式名称只读展示（唯一键不允许改）；新增模式输入 -->
+                    <b th:if="${mw != null}" th:text="${mw.serviceName}">mysql-prod</b>
+                    <input th:if="${mw == null}" type="text" name="serviceName" required
+                           placeholder="如 mysql-prod" style="width:240px;">
+                </td>
+            </tr>
+            <tr>
+                <td>中文说明</td>
+                <td>
+                    <input type="text" name="serviceNameCn" style="width:240px;"
+                           th:value="${mw?.serviceNameCn}" placeholder="如 生产MySQL集群">
+                </td>
+            </tr>
+            <tr>
+                <td>大类（必选）</td>
+                <td>
+                    <select name="category" required>
+                        <option value="" disabled th:selected="${mw?.category == null}">选择大类</option>
+                        <!-- 库值不在固定清单里时兜底显示原值（清单改动/手工入过别的值） -->
+                        <option th:each="cat : ${categories.keySet()}" th:value="${cat}" th:text="${cat}"
+                                th:selected="${mw?.category == cat}">数据库</option>
+                        <option th:if="${mw?.category != null and !mw.category.isEmpty()
+                                        and !categories.containsKey(mw.category)}"
+                                th:value="${mw.category}" th:text="${mw.category} + '（不在清单）'"
+                                th:selected="true">xx（不在清单）</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>小类</td>
+                <td>
+                    <!-- optgroup 按大类分组全量可选（无 JS 级联）；库值不在清单时兜底 -->
+                    <select name="subCategory">
+                        <option value="" th:selected="${mw?.subCategory == null or mw.subCategory.isEmpty()}">（不填）</option>
+                        <optgroup th:each="cat : ${categories.entrySet()}" th:label="${cat.key}">
+                            <option th:each="sub : ${cat.value}" th:value="${sub}" th:text="${sub}"
+                                    th:selected="${mw?.subCategory == sub}">MySQL</option>
+                        </optgroup>
+                        <option th:if="${mw?.subCategory != null and !mw.subCategory.isEmpty()
+                                        and !allSubCategories.contains(mw.subCategory)}"
+                                th:value="${mw.subCategory}" th:text="${mw.subCategory} + '（不在清单）'"
+                                th:selected="true">xx（不在清单）</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>技术负责人</td>
+                <td><input type="text" name="techOwner" style="width:160px;"
+                           th:value="${mw?.techOwner}" placeholder="如 张三"></td>
+            </tr>
+            <tr>
+                <td>业务负责人</td>
+                <td><input type="text" name="bizOwner" style="width:160px;"
+                           th:value="${mw?.bizOwner}" placeholder="如 李四"></td>
+            </tr>
+            <tr>
+                <td>运维负责人</td>
+                <td><input type="text" name="opsOwner" style="width:160px;"
+                           th:value="${mw?.opsOwner}" placeholder="如 王五"></td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:12px;">
+            <button type="submit">保存</button>
+            <a th:href="@{/admin/middleware}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

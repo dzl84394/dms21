@@ -8,15 +8,17 @@
 <main class="content">
 <!--
     新建/编辑共用的独立表单页（/admin/depts/form）
-    dept == null → 新建模式：可挂到任意上级（或顶级）；?parentId=x 时上级预选
-    dept != null → 编辑模式：上级下拉剔除自己及子孙（Service 层保证，防层级成环）
+    dept == null → 新建模式：可挂到任意上级（或顶级）；?parentId=x 时上级预选、公司继承父部门
+    dept != null → 编辑模式：上级下拉剔除自己及子孙（Service 层保证，防层级成环）；候选限定同公司
 -->
 <h1 th:text="${dept != null} ? '编辑部门：' + ${dept.deptName} : '新增部门'">新增部门</h1>
 <p class="desc" th:if="${dept != null}">
-    上级部门下拉里<b>不包含自己及其下级</b>（防止层级成环）；选"（作为顶级部门）"即脱离父节点。
+    上级部门下拉里<b>不包含自己及其下级</b>（防止层级成环），且<b>只列出同公司的部门</b>；选"（作为顶级部门）"即脱离父节点。
+    改"所属公司"后子部门不会自动跟随，需逐一调整。
 </p>
 <p class="desc" th:if="${dept == null}">
     部门可无限往下分：先建顶级（如 总公司），再在列表里点「新增下级」逐层搭建。
+    上级只能挂<b>同公司</b>内的部门。
 </p>
 
 <div class="card">
@@ -29,11 +31,22 @@
                            placeholder="如 研发部 / 平台组" style="width:100%;"></td>
             </tr>
             <tr>
+                <td>所属公司</td>
+                <td>
+                    <!-- datalist：可选已有公司，也可输入新公司名（新公司保存后自动进入选项清单） -->
+                    <input type="text" name="tenant" list="tenantOptions" th:value="${preselectTenant}"
+                           placeholder="如 默认公司 / 子公司A" style="width:100%;">
+                    <datalist id="tenantOptions">
+                        <option th:each="t : ${tenants}" th:value="${t}"></option>
+                    </datalist>
+                </td>
+            </tr>
+            <tr>
                 <td>上级部门</td>
                 <td>
                     <select name="parentId" style="width:100%;">
                         <option value="" th:selected="${preselectParentId == null}">（作为顶级部门）</option>
-                        <!-- 树形候选：按层级缩进展示；编辑时不含自己及子孙 -->
+                        <!-- 树形候选：按层级缩进展示；编辑时不含自己及子孙；只列同公司部门 -->
                         <option th:each="n : ${options}" th:value="${n.dept.id}"
                                 th:text="${#strings.repeat('　', n.depth)} + (${n.depth > 0} ? '└ ' : '') + ${n.dept.deptName}"
                                 th:selected="${preselectParentId == n.dept.id}">研发部</option>

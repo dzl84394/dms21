@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=roles 高亮 -->
+<head th:replace="~{fragments/layout :: head('角色管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('roles')}"></div>
+
+<main class="content">
+<h1>角色管理</h1>
+<p class="desc">
+    角色<b>按子系统隔离</b>：同一个人在不同子系统里可以是不同角色，在某子系统没有任何角色即无该系统权限
+    （如风控账号在财务子系统看不到任何功能）。角色通过勾选「资源」获得权限点，用户在用户表单里被授予角色。
+    新增和编辑都跳独立表单页（编辑页内可直接给角色分配资源）。
+</p>
+
+<!-- 顶部主操作 + 子系统过滤 -->
+<div class="toolbar" style="margin-bottom:10px;">
+    <a th:href="${subsystem != ''} ? @{/admin/roles/form(subsystem=${subsystem})} : @{/admin/roles/form}"
+       class="btn-primary"
+       style="display:inline-block;background:#3742fa;color:#fff;padding:7px 16px;
+       border-radius:6px;text-decoration:none;font-size:13px;">+ 新增角色</a>
+    <form method="get" th:action="@{/admin/roles}" style="display:inline;">
+        <select name="subsystem" onchange="this.form.submit()">
+            <option value="">全部子系统</option>
+            <option th:each="s : ${subsystems}" th:value="${s}" th:text="${s}"
+                    th:selected="${subsystem == s}">admin</option>
+        </select>
+        <button type="submit">过滤</button>
+    </form>
+</div>
+
+<table>
+    <thead>
+    <tr>
+        <th>角色编码</th>
+        <th>角色名称</th>
+        <th>所属子系统</th>
+        <th>排序</th>
+        <th>状态</th>
+        <th>备注</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(roles)}">
+        <td colspan="8" class="muted">该子系统下还没有角色，点上方「新增角色」创建</td>
+    </tr>
+    <tr th:each="r : ${roles}">
+        <td><b th:text="${r.roleCode}">admin</b></td>
+        <td th:text="${r.roleName}">系统管理员</td>
+        <td><span class="badge gray" th:text="${r.subsystem}">admin</span></td>
+        <td th:text="${r.sort != null} ? ${r.sort} : 0">1</td>
+        <td>
+            <span class="badge" th:classappend="${r.isEnabled()} ? 'ok' : 'warn'"
+                  th:text="${r.isEnabled()} ? '启用' : '停用'">启用</span>
+        </td>
+        <td class="muted" th:text="${r.remark != null and !r.remark.isEmpty()} ? ${r.remark} : '-'">-</td>
+        <td class="muted"
+            th:text="${r.updatedAt != null} ? ${#temporals.format(r.updatedAt, 'MM-dd HH:mm')} : '-'">09-24 20:00</td>
+        <td class="inline-form">
+            <a th:href="@{/admin/roles/form(id=${r.id})}" style="color:#3742fa;">编辑/授权</a>
+            <form method="post" th:action="@{'/admin/roles/delete/' + ${r.id}}" class="inline-form"
+                  onsubmit="return confirm('确认删除角色「'+this.dataset.name+'」？该角色的用户授权也会被清除。');"
+                  th:attr="data-name=${r.roleName}">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>

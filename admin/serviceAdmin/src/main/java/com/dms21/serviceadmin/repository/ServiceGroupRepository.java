@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 服务业务组映射的数据库访问层（Spring Data JPA，方法名即 SQL，无需写实现）
+ * 服务业务领域映射的数据库访问层（Spring Data JPA，方法名即 SQL，无需写实现）
  *
  * 示例：
  *   repo.findByServiceName("service-a")   // 按服务名精确查（小写）

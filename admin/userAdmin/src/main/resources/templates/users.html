@@ -8,21 +8,31 @@
 <main class="content">
 <h1>用户管理</h1>
 <p class="desc">
-    维护系统用户：登录账号、姓名、角色、联系方式、启用状态。
+    维护系统用户：登录账号、姓名、角色、联系方式、启用状态、<b>所属公司（多租户隔离）</b>。
     <b>新增和编辑都跳转到独立的表单页</b>（共用同一个表单页）：点「新增用户」或行内「编辑」进入。
     编辑时<b>密码框留空 = 不修改原密码</b>；停用用户后其账号保留但不可登录。
 </p>
 
-<!-- 顶部主操作：进入新建模式 -->
+<!-- 顶部主操作：进入新建模式（带上当前公司过滤，新增时预填公司） -->
 <div class="toolbar" style="margin-bottom:10px;">
-    <a th:href="@{/admin/users/form}" class="btn-primary" style="display:inline-block;
-       background:#3742fa;color:#fff;padding:7px 16px;border-radius:6px;
-       text-decoration:none;font-size:13px;">+ 新增用户</a>
+    <a class="btn-primary"
+       th:href="${tenant != ''} ? @{/admin/users/form(tenant=${tenant})} : @{/admin/users/form}"
+       style="display:inline-block;background:#3742fa;color:#fff;padding:7px 16px;
+       border-radius:6px;text-decoration:none;font-size:13px;">+ 新增用户</a>
+    <form method="get" th:action="@{/admin/users}" style="display:inline;">
+        <select name="tenant" onchange="this.form.submit()">
+            <option value="">全部公司</option>
+            <option th:each="t : ${tenants}" th:value="${t}" th:text="${t}"
+                    th:selected="${tenant == t}">默认公司</option>
+        </select>
+        <button type="submit">过滤</button>
+    </form>
 </div>
 
-<!-- 搜索：GET 表单 -->
+<!-- 搜索：GET 表单（保留公司过滤条件） -->
 <form method="get" th:action="@{/admin/users}" class="toolbar">
     <input type="text" name="q" th:value="${q}" placeholder="搜登录账号 / 姓名" style="width:200px;">
+    <input type="hidden" name="tenant" th:value="${tenant}">
     <button type="submit">搜索</button>
     <a th:href="@{/admin/users}" th:if="${q != ''}" style="color:#3742fa;">清除条件</a>
 </form>
@@ -33,6 +43,8 @@
     <tr>
         <th>登录账号</th>
         <th>姓名</th>
+        <th>所属公司</th>
+        <th>部门</th>
         <th>角色</th>
         <th>邮箱</th>
         <th>手机</th>
@@ -43,12 +55,24 @@
     </thead>
     <tbody>
     <tr th:if="${#lists.isEmpty(users)}">
-        <td colspan="8" class="muted">没有匹配的用户（点上方「新增用户」创建，如 admin/123456）</td>
+        <td colspan="10" class="muted">没有匹配的用户（点上方「新增用户」创建，如 admin/123456）</td>
     </tr>
     <tr th:each="u : ${users}">
         <td th:text="${u.username}">admin</td>
         <td th:text="${u.realName != null and !u.realName.isEmpty()} ? ${u.realName} : '-'">管理员</td>
-        <td th:text="${u.role == 'admin'} ? '管理员' : '普通用户'">管理员</td>
+        <td th:text="${u.effectiveTenant()}">默认公司</td>
+        <!-- 部门：多对多关系（t_dept_user），展示挂载的全部部门名，逗号分隔 -->
+        <td>
+            <span th:each="dn,stat : ${deptNames[u.id]}"
+                  th:text="${stat.first} ? ${dn} : ', ' + ${dn}">研发部</span>
+            <span class="muted" th:if="${#lists.isEmpty(deptNames[u.id])}">-</span>
+        </td>
+        <!-- 角色：按"子系统:角色名"聚合展示该用户在各子系统的角色，逗号分隔；无角色显示 - -->
+        <td>
+            <span th:each="r,st : ${roleMap[u.id]}"
+                  th:text="${(st.first ? '' : ', ') + r.subsystem + ':' + r.roleName}">admin:系统管理员</span>
+            <span class="muted" th:if="${#lists.isEmpty(roleMap[u.id])}">-</span>
+        </td>
         <td th:text="${u.email != null and !u.email.isEmpty()} ? ${u.email} : '-'">-</td>
         <td th:text="${u.phone != null and !u.phone.isEmpty()} ? ${u.phone} : '-'">-</td>
         <td>

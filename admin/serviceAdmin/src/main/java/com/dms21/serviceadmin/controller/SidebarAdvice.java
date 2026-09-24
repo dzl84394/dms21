@@ -6,10 +6,10 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 /**
- * 左侧导航的公共数据：所有页面（服务清单/微服务管理/业务组管理）渲染时自动注入
+ * 左侧导航的公共数据：所有页面（服务清单/微服务管理/业务领域管理）渲染时自动注入
  *
  * 导航只放功能入口（新增功能页面直接在 layout.html 的 main-nav 里加 <a>）；
- * 业务组不进导航，分组过滤在"微服务管理"页下拉里做
+ * 业务领域不进导航，分组过滤在"微服务管理"页下拉里做
  */
 @ControllerAdvice
 public class SidebarAdvice {
@@ -27,11 +27,12 @@ public class SidebarAdvice {
         this.serviceGroupService = serviceGroupService;
     }
 
-    /** 待确认（还没固定）的服务数，导航"微服务管理"旁的数量提醒用 */
+    /** 待确认（还没固定）的服务数，导航"微服务管理"旁的数量提醒用
+     *  只统计业务服务：中间件也在这张表里，但没有"确认固定"流程，不该计入微服务的待确认数 */
     @ModelAttribute("pendingCount")
     public long pendingCount() {
         return serviceGroupService.listAll().stream()
-                .filter(e -> !e.isConfirmed())
+                .filter(e -> !e.isConfirmed() && e.isBizService())
                 .count();
     }
 

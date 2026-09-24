@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=resources 高亮 -->
+<head th:replace="~{fragments/layout :: head('资源管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('resources')}"></div>
+
+<main class="content">
+<h1>资源管理（权限点）</h1>
+<p class="desc">
+    资源是被授权的对象，<b>按子系统隔离</b>。类型分：<b>菜单</b>（页面，可组成菜单树）、
+    <b>按钮</b>（页面内操作，如新增/删除）、<b>接口</b>（后端权限点，预留）。
+    资源编码用 <code>模块:操作</code> 风格（如 user:delete），子系统据此鉴权。新增和编辑都跳独立表单页。
+</p>
+
+<!-- 顶部主操作 + 子系统过滤 -->
+<div class="toolbar" style="margin-bottom:10px;">
+    <a th:href="${subsystem != ''} ? @{/admin/resources/form(subsystem=${subsystem})} : @{/admin/resources/form}"
+       class="btn-primary"
+       style="display:inline-block;background:#3742fa;color:#fff;padding:7px 16px;
+       border-radius:6px;text-decoration:none;font-size:13px;">+ 新增资源</a>
+    <form method="get" th:action="@{/admin/resources}" style="display:inline;">
+        <select name="subsystem" onchange="this.form.submit()">
+            <option value="">全部子系统</option>
+            <option th:each="s : ${subsystems}" th:value="${s}" th:text="${s}"
+                    th:selected="${subsystem == s}">admin</option>
+        </select>
+        <button type="submit">过滤</button>
+    </form>
+</div>
+
+<!-- 树形列表：n.depth 控制缩进，按钮资源显示在所属菜单下 -->
+<table>
+    <thead>
+    <tr>
+        <th>资源名称（层级缩进）</th>
+        <th>资源编码</th>
+        <th>子系统</th>
+        <th>类型</th>
+        <th>路径</th>
+        <th>排序</th>
+        <th>状态</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(tree)}">
+        <td colspan="8" class="muted">该子系统下还没有资源，点上方「新增资源」创建</td>
+    </tr>
+    <tr th:each="n : ${tree}">
+        <td>
+            <span th:text="${#strings.repeat('　', n.depth)} + (${n.depth > 0} ? '└ ' : '')">　</span>
+            <b th:text="${n.resource.resName}">用户管理</b>
+        </td>
+        <td class="muted" th:text="${n.resource.resCode}">user:menu</td>
+        <td><span class="badge gray" th:text="${n.resource.subsystem}">admin</span></td>
+        <td>
+            <span class="badge"
+                  th:classappend="${n.resource.resType == 'MENU'} ? 'ok' : (${n.resource.resType == 'BUTTON'} ? 'warn' : 'gray')"
+                  th:text="${n.resource.resType == 'MENU'} ? '菜单' : (${n.resource.resType == 'BUTTON'} ? '按钮' : '接口')">菜单</span>
+        </td>
+        <td class="muted" th:text="${n.resource.path != null and !n.resource.path.isEmpty()} ? ${n.resource.path} : '-'">-</td>
+        <td th:text="${n.resource.sort != null} ? ${n.resource.sort} : 0">1</td>
+        <td>
+            <span class="badge" th:classappend="${n.resource.isEnabled()} ? 'ok' : 'warn'"
+                  th:text="${n.resource.isEnabled()} ? '启用' : '停用'">启用</span>
+        </td>
+        <td class="inline-form">
+            <a th:href="@{/admin/resources/form(id=${n.resource.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/resources/delete/' + ${n.resource.id}}" class="inline-form"
+                  onsubmit="return confirm('确认删除资源「'+this.dataset.name+'」？所有角色对它的授权会被清除。');"
+                  th:attr="data-name=${n.resource.resName}">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>

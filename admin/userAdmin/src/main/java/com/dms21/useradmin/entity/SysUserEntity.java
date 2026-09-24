@@ -69,6 +69,14 @@ public class SysUserEntity {
             columnDefinition = "boolean default true") // 对已存数据的表加列时给默认值
     private Boolean enabled = true;
 
+    /**
+     * 所属公司（多租户隔离字段）：与部门表的 tenant 同一套取值，页面按公司过滤人员列表
+     * 存公司名称（如 "默认公司"/"子公司A"）；null/空 = 默认公司（历史数据自动归入，读侧归一）
+     */
+    @Column(name = "tenant", length = 64,
+            columnDefinition = "varchar(64) default '默认公司'") // 加列时给历史行默认值
+    private String tenant;
+
     /** 创建时间 */
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -154,6 +162,19 @@ public class SysUserEntity {
 
     public void setEnabled(Boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public String getTenant() {
+        return tenant;
+    }
+
+    public void setTenant(String tenant) {
+        this.tenant = tenant;
+    }
+
+    /** 归一化的所属公司（展示/过滤统一用它，历史行 null 自动归"默认公司"） */
+    public String effectiveTenant() {
+        return Tenants.effective(tenant);
     }
 
     public LocalDateTime getCreatedAt() {

@@ -8,16 +8,16 @@
 <main class="content">
 <h1>微服务管理</h1>
 <p class="desc">
-    流程：Eureka 上的服务<b>自动同步入库</b>（标记"待确认"）→ 人工编辑<b>中文说明</b>、下拉选业务组、补三类负责人 →
-    点<b>确认固定</b>，即成为固定微服务（之后同步永不覆盖）。左侧可按业务组直达；业务组不够用时去"业务组管理"页添加。
+    流程：Eureka 上的服务<b>自动同步入库</b>（标记"待确认"）→ 人工编辑<b>中文说明</b>、下拉选业务领域、补三类负责人 →
+    点<b>确认固定</b>，即成为固定微服务（之后同步永不覆盖）。左侧可按业务领域直达；业务领域不够用时去"业务领域管理"页添加。
 </p>
 
 <!-- 搜索 + 过滤：GET 表单，条件改变后回车/点搜索即生效 -->
 <form method="get" action="/admin/services" class="toolbar">
     <input type="text" name="q" th:value="${q}" placeholder="搜服务名 / 中文说明" style="width:200px;">
     <select name="bizGroup">
-        <option value="">全部业务组</option>
-        <!-- 选项来自业务组字典（显示编码·中文说明，提交编码）；__none__=未分组（search() 支持该哨兵值） -->
+        <option value="">全部业务领域</option>
+        <!-- 选项来自业务领域字典（显示编码·中文说明，提交编码）；__none__=未分组（search() 支持该哨兵值） -->
         <option value="__none__" th:selected="${bizGroup == '__none__'}">未分组</option>
         <option th:each="d : ${dicts}" th:value="${d.groupCode}"
                 th:text="${d.groupCode + (d.groupName != null and !d.groupName.isEmpty() ? '·' + d.groupName : '')}"
@@ -38,8 +38,8 @@
     <tr>
         <th>服务名</th>
         <th>中文说明</th>
-        <th>业务组</th>
-        <th>系统</th>
+        <th>业务领域</th>
+        <th>子系统</th>
         <th>技术负责人</th>
         <th>业务负责人</th>
         <th>运维负责人</th>
@@ -62,7 +62,7 @@
                    th:attr="form=${'editForm-' + g.id}">
         </td>
         <td>
-            <!-- 业务组下拉：选项来自字典（显示编码·中文说明，提交编码）；库里值不在字典时仍显示原值 -->
+            <!-- 业务领域下拉：选项来自字典（显示编码·中文说明，提交编码）；库里值不在字典时仍显示原值 -->
             <select name="bizGroup" th:attr="form=${'editForm-' + g.id}">
                 <option value="" th:selected="${g.bizGroup == null or g.bizGroup.isEmpty()}">未分组</option>
                 <option th:each="d : ${dicts}" th:value="${d.groupCode}"
@@ -76,7 +76,7 @@
             </select>
         </td>
         <td>
-            <input type="text" name="system" th:value="${g.system}"
+            <input type="text" name="subsystem" th:value="${g.subsystem}"
                    th:attr="form=${'editForm-' + g.id}">
         </td>
         <td>

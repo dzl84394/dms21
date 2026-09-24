@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
-<!-- 公共 head（样式）+ 左侧导航，active=subsystem 高亮 -->
 <head th:replace="~{fragments/layout :: head('子系统管理', false)}"></head>
 <body>
 <div th:replace="~{fragments/layout :: sidebar('subsystem')}"></div>
@@ -8,14 +7,54 @@
 <main class="content">
 <h1>子系统管理</h1>
 <p class="desc">
-    维护子系统划分：子系统编码、中文说明、归属业务组、三类负责人。
-    子系统介于业务组与微服务之间：一个业务组下有多个子系统，一个子系统下有多个微服务。当前为占位页，具体维护能力待补充。
+    子系统是<b>业务领域的下一层、微服务的上一层</b>（业务领域 → 子系统 → 微服务）。
+    子系统编码从微服务 Eureka metadata 的 <code>subsystem</code> 字段自动扫描去重入库。
+    新增和编辑都跳转到独立的表单页。
 </p>
 
-<div class="card">
-    <h2>子系统清单</h2>
-    <p class="muted">功能建设中：后续在此放"新增子系统"表单和清单表格（与微服务管理同一套交互风格）。</p>
+<div class="toolbar" style="margin-bottom:10px;">
+    <a th:href="@{/admin/subsystem/form}" style="display:inline-block;background:#3742fa;color:#fff;padding:7px 16px;border-radius:6px;text-decoration:none;font-size:13px;">+ 新增子系统</a>
 </div>
+
+<table>
+    <thead>
+    <tr>
+        <th>子系统编码</th>
+        <th>中文说明</th>
+        <th>所属业务领域</th>
+        <th>技术负责人</th>
+        <th>业务负责人</th>
+        <th>运维负责人</th>
+        <th>服务数</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(dicts)}">
+        <td colspan="9" class="muted">暂无子系统。服务注册到 Eureka 后，其 subsystem 字段会自动扫描到这里。</td>
+    </tr>
+    <tr th:each="d : ${dicts}">
+        <td th:text="${d.subsystemCode}">fls-order</td>
+        <td th:text="${d.subsystemName != null and !d.subsystemName.isEmpty()} ? ${d.subsystemName} : '-'">订单子系统</td>
+        <td th:text="${d.bizGroup != null and !d.bizGroup.isEmpty()} ? ${d.bizGroup} : '-'">hx</td>
+        <td th:text="${d.techOwner != null and !d.techOwner.isEmpty()} ? ${d.techOwner} : '-'">-</td>
+        <td th:text="${d.bizOwner != null and !d.bizOwner.isEmpty()} ? ${d.bizOwner} : '-'">-</td>
+        <td th:text="${d.opsOwner != null and !d.opsOwner.isEmpty()} ? ${d.opsOwner} : '-'">-</td>
+        <td>
+            <a th:href="@{/admin/services(bizGroup=${d.bizGroup})}" style="color:#3742fa;"
+               th:text="${subSystemCounts[d.subsystemCode] != null} ? ${subSystemCounts[d.subsystemCode]} : 0">0</a>
+        </td>
+        <td class="muted" th:text="${d.updatedAt != null} ? ${#temporals.format(d.updatedAt, 'MM-dd HH:mm')} : '-'">09-22 21:00</td>
+        <td class="inline-form">
+            <a th:href="@{/admin/subsystem/form(id=${d.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/subsystem/delete/' + ${d.id}}" class="inline-form">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
 </main>
 
 </body>

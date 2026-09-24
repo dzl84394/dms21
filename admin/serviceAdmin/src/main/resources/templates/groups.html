@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <!-- 公共 head（样式）+ 左侧导航，active=groups 高亮 -->
-<head th:replace="~{fragments/layout :: head('业务组管理', false)}"></head>
+<head th:replace="~{fragments/layout :: head('业务领域管理', false)}"></head>
 <body>
 <div th:replace="~{fragments/layout :: sidebar('groups')}"></div>
 
 <main class="content">
-<h1>业务组管理</h1>
+<h1>业务领域管理</h1>
 <p class="desc">
-    业务组字典：组编码 + 中文说明 + 三类负责人。服务分配业务组在"微服务管理"页的行内下拉里选；
-    左侧导航树"按业务组浏览"的节点和这里的字典对应。
+    业务领域字典：组编码 + 中文说明 + 三类负责人。服务分配业务领域在"微服务管理"页的行内下拉里选；
+    左侧导航树"按业务领域浏览"的节点和这里的字典对应。
 </p>
 
 <div class="card">
-    <h2>业务组维护</h2>
+    <h2>业务领域维护</h2>
     <form method="post" th:action="@{/admin/groups/dict/save}" class="toolbar">
         <input type="text" name="groupCode" placeholder="组编码，如 hx" required>
         <input type="text" name="groupName" placeholder="中文说明，如 华信业务线" style="width:180px;">
         <input type="text" name="techOwner" placeholder="技术负责人" style="width:90px;">
         <input type="text" name="bizOwner" placeholder="业务负责人" style="width:90px;">
         <input type="text" name="opsOwner" placeholder="运维负责人" style="width:90px;">
-        <button type="submit">添加业务组</button>
+        <button type="submit">添加业务领域</button>
         <span class="muted">编码已存在则更新说明和负责人</span>
     </form>
     <table>
@@ -38,7 +38,7 @@
         </thead>
         <tbody>
         <tr th:if="${#lists.isEmpty(dicts)}">
-            <td colspan="8" class="muted">暂无业务组，先在上面添加（如 hx=华信业务线、xw=信维业务线）</td>
+            <td colspan="8" class="muted">暂无业务领域，先在上面添加（如 hx=华信业务线、xw=信维业务线）</td>
         </tr>
         <!-- groupCounts 由 GroupController 注入（countByGroup，key=__none__ 表示未分组不在此列） -->
         <tr th:each="d : ${dicts}">

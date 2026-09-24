@@ -6,7 +6,7 @@ spring:
     name: service-admin
   thymeleaf:
     cache: false # 开发期关缓存，改模板刷新即生效；生产建议 true
-  # H2 内嵌数据库（文件模式）：业务组管理数据落盘在启动目录的 data/ 下，重启不丢
+  # H2 内嵌数据库（文件模式）：业务领域管理数据落盘在启动目录的 data/ 下，重启不丢
   # jdbc:h2:file:./data/serviceadmin → 生成 data/serviceadmin.mv.db
   datasource:
     url: jdbc:h2:file:./data/serviceadmin;AUTO_SERVER=TRUE
@@ -51,6 +51,9 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
+    metadata-map:
+      bizGroup: platform # 归平台业务组，serviceAdmin 大盘可展示/过滤
+      subsystem: admin
 # Actuator 端点配置（与 serviceA/serviceB 一致）
 # health: 健康详情；httpexchanges: 最近 100 次 HTTP 请求跟踪
 management:

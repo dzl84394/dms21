@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=middleware 高亮 -->
+<head th:replace="~{fragments/layout :: head('编辑扩展信息', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('middleware')}"></div>
+
+<main class="content">
+<h1>编辑扩展信息 — <span th:text="${mw.serviceName}">mysql-prod</span></h1>
+<p class="desc">
+    按<b>大类</b>预制了各类中间件的专有字段结构（当前大类：<b th:text="${mw.category}">数据库</b><span
+        th:if="${!#lists.isEmpty(extTemplate)}">，共 <span th:text="${#lists.size(extTemplate)}">0</span> 个字段</span>）。
+    这些字段整体转成 JSON 字符串存到 t_service_group.ext 列。模板外的未知字段填到"额外字段"区，每行一条 <code>key=value</code>。
+    改大类请回列表页点"编辑"进表单页修改后重新进入本页（表单字段跟随大类预制结构）。
+</p>
+
+<div class="card">
+    <h2>预制字段（<span th:text="${mw.category}">数据库</span>）</h2>
+    <form method="post" action="/admin/middleware/ext/save">
+        <input type="hidden" name="id" th:value="${mw.id}">
+        <!-- 按大类模板渲染字段（key→中文标签）；"其他中间件"模板为空 → 提示走额外字段 -->
+        <p class="muted" th:if="${#lists.isEmpty(extTemplate)}">
+            该大类没有预制字段结构，专有属性请全部填在下方"额外字段"区（每行 key=value）。
+        </p>
+        <table th:if="${!#lists.isEmpty(extTemplate)}">
+            <tbody>
+            <tr th:each="f : ${extTemplate.entrySet()}">
+                <td th:text="${f.value}">主机地址</td>
+                <td>
+                    <input type="text" th:name="${'ext_' + f.key}" style="width:320px;"
+                           th:value="${extValues[f.key]}" placeholder="留空即清除该字段">
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h2 style="margin-top:16px;">额外字段（模板外的未知字段）</h2>
+        <textarea name="extra" rows="5" style="width:400px;"
+                  placeholder="每行一条：key=value（value 留空表示删除该字段）"></textarea>
+        <p class="muted">已有额外字段不会自动带出（避免与预制字段混淆）；重复提交同名 key 会覆盖，value 留空即删除。</p>
+
+        <div style="margin-top:12px;">
+            <button type="submit">保存</button>
+            <a th:href="@{/admin/middleware}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

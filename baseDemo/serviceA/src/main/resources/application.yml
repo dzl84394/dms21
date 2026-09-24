@@ -16,8 +16,8 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     metadata-map:
-      bizGroup: hx
-      system: fls-order
+      bizGroup: demo
+      subsystem: demo
     prefer-ip-address: true
 # Actuator 端点配置
 # health: 显示完整健康详情（含磁盘、ping、eureka 等）

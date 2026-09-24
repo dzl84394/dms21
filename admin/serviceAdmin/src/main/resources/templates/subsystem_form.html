@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('子系统表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('subsystem')}"></div>
+
+<main class="content">
+<h1 th:text="${dict != null} ? '编辑子系统：' + ${dict.subsystemCode} : '新增子系统'">新增子系统</h1>
+<p class="desc" th:if="${dict != null}">
+    子系统编码创建后<b>不允许修改</b>；所属业务领域从字典下拉选择。
+</p>
+<p class="desc" th:if="${dict == null}">
+    子系统编码来自微服务 Eureka metadata 的 subsystem 字段，也可手动添加。
+</p>
+
+<div class="card">
+    <form method="post" th:action="@{/admin/subsystem/save}">
+        <input type="hidden" name="id" th:value="${dict?.id}">
+        <table style="max-width:560px;">
+            <tr>
+                <td style="width:120px;">子系统编码 <span th:if="${dict == null}" style="color:#ff6b81;">*</span></td>
+                <td><input type="text" name="subsystemCode" required th:value="${dict?.subsystemCode}"
+                           th:readonly="${dict != null}" placeholder="如 fls-order" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>中文说明</td>
+                <td><input type="text" name="subsystemName" th:value="${dict?.subsystemName}"
+                           placeholder="如 订单子系统" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>所属业务领域</td>
+                <td>
+                    <select name="bizGroup" style="width:100%;">
+                        <option value="">未指定</option>
+                        <option th:each="d : ${bizGroupDicts}" th:value="${d.groupCode}"
+                                th:text="${d.groupCode + (d.groupName != null and !d.groupName.isEmpty() ? '·' + d.groupName : '')}"
+                                th:selected="${dict?.bizGroup == d.groupCode}">hx·华信</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>技术负责人</td>
+                <td><input type="text" name="techOwner" th:value="${dict?.techOwner}" placeholder="如 张三" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>业务负责人</td>
+                <td><input type="text" name="bizOwner" th:value="${dict?.bizOwner}" placeholder="如 李四" style="width:100%;"></td>
+            </tr>
+            <tr>
+                <td>运维负责人</td>
+                <td><input type="text" name="opsOwner" th:value="${dict?.opsOwner}" placeholder="如 王五" style="width:100%;"></td>
+            </tr>
+        </table>
+        <div class="toolbar" style="margin-top:14px;">
+            <button type="submit" th:text="${dict != null} ? '保存修改' : '创建子系统'">创建子系统</button>
+            <a th:href="@{/admin/subsystem}" style="color:#808a99;">取消返回列表</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

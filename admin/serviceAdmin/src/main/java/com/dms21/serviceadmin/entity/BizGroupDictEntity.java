@@ -12,7 +12,7 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 /**
- * 业务组字典实体：定义有哪些业务组，每个组配一个中文说明和三类负责人
+ * 业务领域字典实体：定义有哪些业务领域，每个组配一个中文说明和三类负责人
  *
  * 表结构（H2 自动建表，ddl-auto: update）：
  *   T_BIZ_GROUP_DICT

@@ -1,7 +1,9 @@
 package com.dms21.useradmin.service;
 
 import com.dms21.useradmin.entity.DeptEntity;
+import com.dms21.useradmin.entity.Tenants;
 import com.dms21.useradmin.repository.DeptRepository;
+import com.dms21.useradmin.repository.DeptUserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,16 +28,19 @@ import java.util.Set;
  *
  * 示例：
  *   deptService.treeList();            // → [总公司(0层), 研发部(1层), 平台组(2层)...]
- *   deptService.save(null, "研发部", 1L, 1);   // 新建部门挂到 id=1 下
- *   deptService.save(2L, "研发中心", 1L, 2);    // 改名/换上级（校验环路）
+ *   deptService.treeList("子公司A");    // → 只含子公司A的部门树（多租户隔离）
+ *   deptService.save(null, "研发部", 1L, 1, null);   // 新建部门挂到 id=1 下（默认公司）
+ *   deptService.save(2L, "研发中心", 1L, 2, "子公司A"); // 改名/换上级/换公司（校验环路和跨公司）
  */
 @Service
 public class DeptService {
 
     private final DeptRepository repository;
+    private final DeptUserRepository deptUserRepository;
 
-    public DeptService(DeptRepository repository) {
+    public DeptService(DeptRepository repository, DeptUserRepository deptUserRepository) {
         this.repository = repository;
+        this.deptUserRepository = deptUserRepository;
     }
 
     /**
@@ -47,15 +52,50 @@ public class DeptService {
     }
 
     /**
-     * 全量树形列表（深度优先展开：根在前，子节点紧跟父节点，同级按 sort/id）
-     * 数据量小（部门几十上百），全表加载内存组树即可，无需递归 SQL
+     * 全量树形列表（全部公司混排；一般用带租户参数的 treeList(tenant) 做公司隔离）
      *
      * 容错：父 id 指向不存在记录的"孤儿"节点，按顶级处理，保证数据不丢
      *
      * 示例：treeList() → [总公司(0), 研发部(1), 平台组(2), 业务组(2), 市场部(1)]
      */
     public List<DeptNode> treeList() {
+        return buildTree(repository.findAllByOrderByIdAsc());
+    }
+
+    /**
+     * 按公司过滤的树形列表（多租户隔离入口）：只展示指定公司的部门树，各公司互不可见
+     *
+     * @param tenant 公司名（按 effective 归一后匹配）；null/空 = 不过滤（全部公司混排）
+     *
+     * 示例：treeList("子公司A") → 只含子公司A的部门树（其根节点是子公司A的顶级部门）
+     */
+    public List<DeptNode> treeList(String tenant) {
+        return buildTree(filtered(tenant));
+    }
+
+    /**
+     * 按公司过滤记录集（内部工具）：tenant 为空不过滤，否则按归一化公司名匹配
+     */
+    private List<DeptEntity> filtered(String tenant) {
         List<DeptEntity> all = repository.findAllByOrderByIdAsc();
+        if (tenant == null || tenant.isBlank()) {
+            return all;
+        }
+        String want = Tenants.effective(tenant);
+        List<DeptEntity> result = new ArrayList<>();
+        for (DeptEntity d : all) {
+            if (d.effectiveTenant().equals(want)) {
+                result.add(d);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 组树核心（原 treeList 的逻辑抽出来复用）：
+     * 深度优先展开：根在前，子节点紧跟父节点，同级按 sort/id；孤儿节点按顶级处理
+     */
+    private List<DeptNode> buildTree(List<DeptEntity> all) {
         Map<Long, DeptEntity> byId = new LinkedHashMap<>();
         for (DeptEntity d : all) {
             byId.put(d.getId(), d);
@@ -72,11 +112,6 @@ public class DeptService {
                 children.computeIfAbsent(pid, k -> new ArrayList<>()).add(d);
             }
         }
-        Comparator<DeptEntity> bySort = Comparator
-                .comparing((DeptEntity d) -> d.getSort() == null ? 0 : d.getSort())
-                .thenComparingLong(DeptEntity::getId);
-        roots.sort(bySort);
-
         List<DeptNode> result = new ArrayList<>();
         buildLevel(roots, children, 0, result);
         return result;
@@ -100,19 +135,23 @@ public class DeptService {
     }
 
     /**
-     * 上级部门下拉可选项：全量树形列表，编辑模式剔除自己及子孙（防止选成环路）
+     * 上级部门下拉可选项：限定公司内的树形列表，编辑模式剔除自己及子孙（防止选成环路）
+     * 跨公司挂上级在 save 时会被拒绝，所以候选只给同公司的部门
      *
-     * 示例：编辑"研发部"(id=2) 时 options(2L) → 总公司、市场部（不含研发部及其下级）
+     * @param excludeId 编辑模式的部门 id（其自身及整棵子树从候选剔除）；null=新建
+     * @param tenant    公司过滤（编辑模式传该部门自己的公司；新建传预选的公司）
+     *
+     * 示例：编辑"研发部"(id=2, 默认公司) 时 options(2L, "默认公司") → 默认公司内的总公司、市场部
      */
-    public List<DeptNode> parentOptions(Long excludeId) {
+    public List<DeptNode> parentOptions(Long excludeId, String tenant) {
         if (excludeId == null) {
-            return treeList();
+            return treeList(tenant);
         }
         // 收集 excludeId 的整棵子树（含自身），从候选里剔除
         Set<Long> excluded = new HashSet<>();
         excluded.add(excludeId);
         Map<Long, List<DeptEntity>> children = new LinkedHashMap<>();
-        for (DeptEntity d : repository.findAllByOrderByIdAsc()) {
+        for (DeptEntity d : filtered(tenant)) {
             if (d.getParentId() != null) {
                 children.computeIfAbsent(d.getParentId(), k -> new ArrayList<>()).add(d);
             }
@@ -130,7 +169,7 @@ public class DeptService {
             }
         }
         List<DeptNode> result = new ArrayList<>();
-        for (DeptNode n : treeList()) {
+        for (DeptNode n : treeList(tenant)) {
             if (!excluded.contains(n.dept().getId())) {
                 result.add(n);
             }
@@ -141,26 +180,36 @@ public class DeptService {
     /**
      * 新增或修改部门（upsert）
      *
-     * @param id       空=新增；非空=修改（改名称/上级/排序）
-     * @param parentId 上级部门；null=顶级
+     * @param id       空=新增；非空=修改（改名称/上级/排序/公司）
+     * @param parentId 上级部门；null=顶级（只能挂同公司内的部门）
+     * @param tenant   所属公司；null/空 = 默认公司（统一存归一化值，非空）
      * @throws IllegalArgumentException 名称空 / 上级不存在 / 上级选了自己或自己的子孙（环路）
+     *         / 上级属于其他公司（跨公司挂载）
      *
      * 示例：
-     *   save(null, "平台组", 2L, 1);   // 新建"平台组"挂到研发部(id=2)下
-     *   save(4L, "平台组", null, 3);   // 升级为顶级部门并调排序
+     *   save(null, "平台组", 2L, 1, null);          // 默认公司下新建"平台组"挂到研发部(id=2)
+     *   save(4L, "平台组", null, 3, "子公司A");      // 改为公司子公司A并升级为顶级（子部门不跟随）
      */
     @Transactional
-    public DeptEntity save(Long id, String deptName, Long parentId, Integer sort) {
+    public DeptEntity save(Long id, String deptName, Long parentId, Integer sort, String tenant) {
         String name = deptName == null ? "" : deptName.trim();
         if (name.isEmpty()) {
             throw new IllegalArgumentException("部门名称不能为空");
         }
+        // 公司归属归一化后落库（null/空 → "默认公司"字面值，保证扫描选项不重复）
+        String effTenant = Tenants.effective(tenant);
         if (parentId != null) {
-            if (repository.findById(parentId).isEmpty()) {
+            DeptEntity parent = repository.findById(parentId).orElse(null);
+            if (parent == null) {
                 throw new IllegalArgumentException("上级部门不存在: id=" + parentId);
             }
             if (parentId.equals(id)) {
                 throw new IllegalArgumentException("上级部门不能选自己");
+            }
+            // 多租户隔离：上级必须和本部门同公司，否则两棵公司的树就串了
+            if (!parent.effectiveTenant().equals(effTenant)) {
+                throw new IllegalArgumentException(
+                        "上级部门属于「" + parent.effectiveTenant() + "」，不能跨公司挂载上级");
             }
         }
 
@@ -191,6 +240,7 @@ public class DeptService {
         entity.setDeptName(name);
         entity.setParentId(parentId);
         entity.setSort(sort);
+        entity.setTenant(effTenant);
         return repository.save(entity);
     }
 
@@ -203,14 +253,16 @@ public class DeptService {
 
     /**
      * 删除部门。删除保护：存在下级时不允许删（防止整棵子树被误删后数据不可见）
+     * 删除成功时同步清理该部门的成员挂载关系（t_dept_user），不留孤儿关系行
      *
-     * 示例：delete(4L) → 删除"平台组"；若它下面还有组则抛异常提示先处理下级
+     * 示例：delete(4L) → 删除"平台组"并清掉它的成员关系；若它下面还有组则抛异常提示先处理下级
      */
     @Transactional
     public void delete(Long id) {
         if (repository.existsByParentId(id)) {
             throw new IllegalArgumentException("该部门下还有下级部门，请先删除或迁移下级");
         }
+        deptUserRepository.deleteByDeptId(id); // 成员关系一并清理
         repository.deleteById(id);
     }
 }

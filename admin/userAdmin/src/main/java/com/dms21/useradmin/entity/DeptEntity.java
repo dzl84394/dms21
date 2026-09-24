@@ -58,6 +58,15 @@ public class DeptEntity {
     @Column(name = "sort")
     private Integer sort;
 
+    /**
+     * 所属公司（多租户隔离字段）：同一张表承载多个公司的部门树，页面按公司过滤互不可见
+     * 存公司名称（如 "默认公司"/"子公司A"）；null/空 = 默认公司（历史数据自动归入，读侧归一）
+     * 上级部门只能挂同公司内的部门（save 时校验）
+     */
+    @Column(name = "tenant", length = 64,
+            columnDefinition = "varchar(64) default '默认公司'") // 加列时给历史行默认值
+    private String tenant;
+
     /** 创建时间 */
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -110,6 +119,19 @@ public class DeptEntity {
 
     public void setSort(Integer sort) {
         this.sort = sort;
+    }
+
+    public String getTenant() {
+        return tenant;
+    }
+
+    public void setTenant(String tenant) {
+        this.tenant = tenant;
+    }
+
+    /** 归一化的所属公司（展示/过滤/校验统一用它，历史行 null 自动归"默认公司"） */
+    public String effectiveTenant() {
+        return Tenants.effective(tenant);
     }
 
     public LocalDateTime getCreatedAt() {
