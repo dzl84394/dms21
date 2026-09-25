@@ -24,6 +24,7 @@ import java.util.Map;
  *     GET /admin/middleware    中间件管理
  *   gov-nav（"服务治理"小标题）：
  *     GET /admin/governance/scheduler  调度中心
+ *     （统一存储为侧边栏外链，指向作者 CSDN 博文，无本服务页面）
  *     GET /admin/governance/config     配置中心
  *     GET /admin/governance/gateway    网关
  *     GET /admin/governance/api        API 管理

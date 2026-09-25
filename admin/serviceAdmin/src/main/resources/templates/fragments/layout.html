@@ -9,7 +9,7 @@
     <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
     active 参数用于高亮当前页：
       dashboard / groups / subsystem / services / architecture / middleware
-      gov-scheduler / gov-config / gov-gateway / gov-api（服务治理分组）
+      gov-scheduler / gov-config / gov-gateway / gov-api（服务治理分组；统一存储为外链，无 active 值）
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head th:fragment="head(title, refresh)">
@@ -95,7 +95,7 @@
 <!--
   左侧导航 fragment，分两段：
     main-nav：Eureka 查看 / 业务领域管理 / 子系统管理 / 微服务管理 / 架构图管理 / 中间件管理
-    gov-nav：tree-title "服务治理" + 调度中心 / 配置中心 / 网关 / API 管理
+    gov-nav：tree-title "服务治理" + 调度中心 / 统一存储（外链博文） / 配置中心 / 网关 / API 管理
   新增功能页面时在对应 nav 里加 <a>，并同步更新上方的 active 取值注释
   pendingCount > 0 时在"微服务管理"旁显示待确认数量提醒
 -->
@@ -135,11 +135,16 @@
             <span>资源管理</span><span class="count">8084</span>
         </a>
     </nav>
-    <!-- 服务治理分组：不可点击的小标题 + 功能入口（调度/配置/网关/API） -->
+    <!-- 服务治理分组：不可点击的小标题 + 功能入口（调度/存储外链/配置/网关/API） -->
     <nav class="gov-nav">
         <div class="tree-title">服务治理</div>
         <a th:href="@{/admin/governance/scheduler}" th:classappend="${active == 'gov-scheduler'} ? 'on'">
             <span>调度中心</span>
+        </a>
+        <!-- 统一存储：外链到作者 CSDN 博文（新标签页打开，不占用后台会话页） -->
+        <a href="https://blog.csdn.net/dzl84394/article/details/166646939?sharetype=blogdetail&amp;sharerId=166646939&amp;sharerefer=PC&amp;sharesource=dzl84394&amp;spm=1011.2480.3001.8118"
+           target="_blank" rel="noopener">
+            <span>统一存储</span>
         </a>
         <a th:href="@{/admin/governance/config}" th:classappend="${active == 'gov-config'} ? 'on'">
             <span>配置中心</span>
