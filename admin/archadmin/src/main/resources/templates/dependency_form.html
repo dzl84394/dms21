@@ -27,17 +27,17 @@
             <tr>
                 <td style="width:130px;">依赖方（必选）</td>
                 <td>
-                    <select name="sourceId" required style="min-width:320px;">
-                        <option value="" disabled th:selected="${dep?.sourceId == null}">选择依赖方（谁发起依赖）</option>
+                    <select name="sourceName" required style="min-width:320px;">
+                        <option value="" disabled th:selected="${dep?.sourceName == null}">选择依赖方（谁发起依赖）</option>
                         <optgroup label="业务服务（微服务）">
-                            <option th:each="n : ${bizNodes}" th:value="${n.id}"
-                                    th:text="${nodeLabels[n.id]}"
-                                    th:selected="${dep?.sourceId == n.id}">service-a</option>
+                            <option th:each="n : ${bizNodes}" th:value="${n.serviceName}"
+                                    th:text="${nodeLabels[n.serviceName]}"
+                                    th:selected="${dep?.sourceName == n.serviceName}">service-a</option>
                         </optgroup>
                         <optgroup label="中间件">
-                            <option th:each="n : ${mwNodes}" th:value="${n.id}"
-                                    th:text="${nodeLabels[n.id]}"
-                                    th:selected="${dep?.sourceId == n.id}">eureka［注册配置中心 / Eureka］</option>
+                            <option th:each="n : ${mwNodes}" th:value="${n.serviceName}"
+                                    th:text="${nodeLabels[n.serviceName]}"
+                                    th:selected="${dep?.sourceName == n.serviceName}">eureka［注册配置中心 / Eureka］</option>
                         </optgroup>
                     </select>
                 </td>
@@ -45,17 +45,17 @@
             <tr>
                 <td>被依赖方（必选）</td>
                 <td>
-                    <select name="targetId" required style="min-width:320px;">
-                        <option value="" disabled th:selected="${dep?.targetId == null}">选择被依赖方（被调用的服务 / DB / MQ / 注册中心）</option>
+                    <select name="targetName" required style="min-width:320px;">
+                        <option value="" disabled th:selected="${dep?.targetName == null}">选择被依赖方（被调用的服务 / DB / MQ / 注册中心）</option>
                         <optgroup label="业务服务（微服务）">
-                            <option th:each="n : ${bizNodes}" th:value="${n.id}"
-                                    th:text="${nodeLabels[n.id]}"
-                                    th:selected="${dep?.targetId == n.id}">user-admin</option>
+                            <option th:each="n : ${bizNodes}" th:value="${n.serviceName}"
+                                    th:text="${nodeLabels[n.serviceName]}"
+                                    th:selected="${dep?.targetName == n.serviceName}">user-admin</option>
                         </optgroup>
                         <optgroup label="中间件">
-                            <option th:each="n : ${mwNodes}" th:value="${n.id}"
-                                    th:text="${nodeLabels[n.id]}"
-                                    th:selected="${dep?.targetId == n.id}">mysql-prod［数据库 / MySQL］</option>
+                            <option th:each="n : ${mwNodes}" th:value="${n.serviceName}"
+                                    th:text="${nodeLabels[n.serviceName]}"
+                                    th:selected="${dep?.targetName == n.serviceName}">mysql-prod［数据库 / MySQL］</option>
                         </optgroup>
                     </select>
                 </td>

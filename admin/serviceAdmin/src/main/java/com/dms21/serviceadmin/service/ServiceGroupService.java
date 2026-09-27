@@ -5,7 +5,6 @@ import com.dms21.serviceadmin.entity.ServiceCategories;
 import com.dms21.serviceadmin.entity.ServiceGroupEntity;
 import com.dms21.serviceadmin.entity.SubSystemDictEntity;
 import com.dms21.serviceadmin.repository.BizGroupDictRepository;
-import com.dms21.serviceadmin.repository.ServiceDependencyRepository;
 import com.dms21.serviceadmin.repository.ServiceGroupRepository;
 import com.dms21.serviceadmin.repository.SubSystemDictRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -44,19 +43,15 @@ public class ServiceGroupService {
     private final BizGroupDictRepository dictRepository;
     private final SubSystemDictRepository subSystemDictRepository;
     private final MonitorService monitorService;
-    /** 依赖边仓库：删除微服务/中间件节点时级联清理相连的依赖边，避免留下指向空节点的悬空边 */
-    private final ServiceDependencyRepository dependencyRepository;
 
     public ServiceGroupService(ServiceGroupRepository repository,
                                BizGroupDictRepository dictRepository,
                                SubSystemDictRepository subSystemDictRepository,
-                               MonitorService monitorService,
-                               ServiceDependencyRepository dependencyRepository) {
+                               MonitorService monitorService) {
         this.repository = repository;
         this.dictRepository = dictRepository;
         this.subSystemDictRepository = subSystemDictRepository;
         this.monitorService = monitorService;
-        this.dependencyRepository = dependencyRepository;
     }
 
     /**
@@ -284,13 +279,41 @@ public class ServiceGroupService {
 
     /**
      * 按主键删除微服务/中间件节点。
-     * 同时删除以该节点为依赖方或被依赖方的全部依赖边（t_service_dependency 不建外键约束，
-     * 级联由应用层保证），否则依赖图里会留下指向不存在节点的悬空边。
+     * 依赖边已迁移到 archAdmin 维护（按服务名引用，跨库无法级联）；
+     * 节点删除后 archAdmin 依赖关系列表会按"节点已删除"兜底展示，由人工清理边。
      */
     @Transactional
     public void delete(Long id) {
-        dependencyRepository.deleteByNodeId(id);
         repository.deleteById(id);
+    }
+
+    /**
+     * 幂等补齐基础中间件节点（只补不删）：eureka 注册中心与各服务的 H2 文件库。
+     * 这些节点不注册到 Eureka，但 archAdmin 维护依赖边时需要它们作为被依赖方出现
+     * （由 /api/nodes 调用时触发）。中间件节点属于基础设施，直接置为已确认，
+     * 不会出现在微服务页的"待确认"列表。
+     */
+    @Transactional
+    public void ensureInfraNodes() {
+        ensureInfraNode("eureka", "Eureka 注册中心", "注册配置中心", "Eureka");
+        ensureInfraNode("h2-serviceadmin", "serviceAdmin 库（H2 文件库）", "数据库", "H2");
+        ensureInfraNode("h2-useradmin", "userAdmin 库（H2 文件库）", "数据库", "H2");
+        ensureInfraNode("h2-archadmin", "archAdmin 库（H2 文件库）", "数据库", "H2");
+    }
+
+    /** 按服务名确保中间件节点存在（幂等），不存在才创建 */
+    private void ensureInfraNode(String serviceName, String cnName, String category, String subCategory) {
+        repository.findByServiceName(serviceName).orElseGet(() -> {
+            ServiceGroupEntity e = new ServiceGroupEntity();
+            e.setServiceName(serviceName);
+            e.setServiceNameCn(cnName);
+            e.setCategory(category);
+            e.setSubCategory(subCategory);
+            e.setBizGroup("");
+            e.setSubsystem("");
+            e.setConfirmed(true);
+            return repository.save(e);
+        });
     }
 
     /**

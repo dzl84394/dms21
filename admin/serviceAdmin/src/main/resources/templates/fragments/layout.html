@@ -8,8 +8,8 @@
   用法二（左侧导航）：
     <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
     active 参数用于高亮当前页：
-      dashboard / groups / subsystem / services / dependencies / middleware
-      （架构图管理为跨服务外链到 archAdmin:8085，无本服务 active 值）
+      dashboard / groups / subsystem / services / middleware
+      （架构图/依赖关系均在 archAdmin:8085，入口在下方"系统管理"组的"架构管理"，无本服务 active 值）
       gov-scheduler / gov-config / gov-gateway / gov-api（服务治理分组；统一存储为外链，无 active 值）
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
@@ -36,7 +36,7 @@
         .sidebar .tree-title { font-size: 12px; color: #808a99; padding: 14px 20px 6px; }
         /* 服务治理分组容器（小标题 tree-title 自带间距，这里只补底部留白） */
         .sidebar .gov-nav { padding-bottom: 12px; }
-        /* 系统管理分组容器（跨服务链接：用户管理 → userAdmin） */
+        /* 系统管理分组容器（跨服务链接：权限管理 → userAdmin，架构管理 → archAdmin） */
         .sidebar .sys-nav { padding-bottom: 12px; }
         .sidebar .count { background: #414957; color: #c8ccd4; border-radius: 9px;
                           padding: 1px 8px; font-size: 11px; }
@@ -95,7 +95,7 @@
 
 <!--
   左侧导航 fragment，分两段：
-    main-nav：Eureka 查看 / 业务领域管理 / 子系统管理 / 微服务管理 / 架构图管理 / 依赖关系 / 中间件管理
+    main-nav：Eureka 查看 / 业务领域管理 / 子系统管理 / 微服务管理 / 中间件管理
     gov-nav：tree-title "服务治理" + 调度中心 / 统一存储（外链博文） / 配置中心 / 网关 / API 管理
   新增功能页面时在对应 nav 里加 <a>，并同步更新上方的 active 取值注释
   pendingCount > 0 时在"微服务管理"旁显示待确认数量提醒
@@ -116,28 +116,15 @@
             <span>微服务管理</span>
             <span class="count" th:if="${pendingCount > 0}" th:text="${pendingCount}">0</span>
         </a>
-        <!-- 架构图管理：跨服务跳 archAdmin(8085) 的子系统清单（SSO 已打通，Cookie 全域生效免登录） -->
-        <a th:href="${archAdminUrl + '/admin/subsystems'}">
-            <span>架构图管理</span><span class="count">8085</span>
-        </a>
-        <a th:href="@{/admin/dependencies}" th:classappend="${active == 'dependencies'} ? 'on'">
-            <span>依赖关系</span>
-        </a>
         <a th:href="@{/admin/middleware}" th:classappend="${active == 'middleware'} ? 'on'">
             <span>中间件管理</span>
         </a>
     </nav>
-    <!-- 系统管理分组：账号/角色/资源（权限）都在 userAdmin 用户中心；架构管理在 archAdmin（跨服务跳转，SSO 后 Cookie 直接生效） -->
+    <!-- 系统管理分组：权限管理（用户/角色/资源）在 userAdmin 用户中心；架构管理在 archAdmin（跨服务跳转，SSO 后 Cookie 直接生效） -->
     <nav class="sys-nav">
         <div class="tree-title">系统管理</div>
         <a th:href="${userAdminUrl + '/admin/users'}">
-            <span>用户管理</span><span class="count">8084</span>
-        </a>
-        <a th:href="${userAdminUrl + '/admin/roles'}">
-            <span>角色管理</span><span class="count">8084</span>
-        </a>
-        <a th:href="${userAdminUrl + '/admin/resources'}">
-            <span>资源管理</span><span class="count">8084</span>
+            <span>权限管理</span><span class="count">8084</span>
         </a>
         <a th:href="${archAdminUrl + '/admin'}">
             <span>架构管理</span><span class="count">8085</span>

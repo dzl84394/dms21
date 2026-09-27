@@ -8,7 +8,7 @@
     <head th:replace="~{fragments/layout :: head('子系统清单', false)}"></head>
     <div th:replace="~{fragments/layout :: sidebar('__list__')}"></div>   清单页
     <div th:replace="~{fragments/layout :: sidebar(subsystem.code)}"></div> 详情/编辑页
-  active 取值：'__list__' 高亮"子系统清单"；传子系统 code 高亮对应子系统
+  active 取值：'__list__' 高亮"子系统清单"；'dependencies' 高亮"依赖关系"；传子系统 code 高亮对应子系统
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head th:fragment="head(title, refresh)">
@@ -54,6 +54,7 @@
         button { padding: 5px 14px; border: none; border-radius: 6px; cursor: pointer;
                  background: #2f3542; color: #fff; font-size: 12px; }
         button:hover { opacity: .85; }
+        button.del { background: #ff6b81; }
         .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px;
                    font-size: 13px; flex-wrap: wrap; }
         .badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; color: #fff; }
@@ -89,6 +90,10 @@
         <div class="tree-title">架构管理</div>
         <a th:href="@{/admin/subsystems}" th:classappend="${activeCode == '__list__'} ? 'on'">
             <span>子系统清单</span>
+        </a>
+        <!-- 依赖关系：全局的"微服务/中间件"有向边维护（后续 Mermaid 依赖图数据源） -->
+        <a th:href="@{/admin/dependencies}" th:classappend="${activeCode == 'dependencies'} ? 'on'">
+            <span>依赖关系</span>
         </a>
         <div class="tree-title">子系统</div>
         <a th:if="${#lists.isEmpty(subsystems)}" class="muted" style="cursor:default;">

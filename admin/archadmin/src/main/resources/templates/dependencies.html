@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
-<!-- 公共 head（样式）+ 左侧导航，active=dependencies 高亮 -->
+<!-- 公共 head（样式）+ 左侧导航，active=dependencies 高亮"依赖关系" -->
 <head th:replace="~{fragments/layout :: head('依赖关系', false)}"></head>
 <body>
 <div th:replace="~{fragments/layout :: sidebar('dependencies')}"></div>
@@ -9,10 +9,11 @@
 <h1>微服务依赖关系</h1>
 <p class="desc">
     维护"依赖方 → 被依赖方"的有向关系：被依赖方既可以是另一个<b>微服务</b>（服务调用/消息），
-    也可以是<b>中间件</b>节点（数据库 / MQ / 缓存 / 注册配置中心）。节点来自微服务管理与中间件管理。
+    也可以是<b>中间件</b>节点（数据库 / MQ / 缓存 / 注册配置中心）。节点清单实时来自
+    serviceAdmin（微服务管理与中间件管理），本页只维护边。
     初期关系<b>手写</b>维护；后续接入链路追踪（trace）后会自动补边并标注
-    <b>trace自动</b>，自动补边不会删除手写关系。这些边后续用于在架构图管理里渲染 Mermaid 依赖图。
-    <a th:href="@{/admin/dependencies/form}" style="color:#3742fa;">+ 新增依赖</a>
+    <b>trace自动</b>，自动补边不会删除手写关系。这些边后续用于渲染 Mermaid 依赖图。
+    <a th:href="@{/admin/dependencies/form}">+ 新增依赖</a>
 </p>
 
 <!-- 过滤：GET 表单，按节点名称关键字 / 类型 / 来源 -->
@@ -28,7 +29,7 @@
         <option value="trace自动" th:selected="${origin == 'trace自动'}">trace自动</option>
     </select>
     <button type="submit">过滤</button>
-    <a th:href="@{/admin/dependencies}" th:if="${q != '' or type != '' or origin != ''}" style="color:#3742fa;">清除条件</a>
+    <a th:href="@{/admin/dependencies}" th:if="${q != '' or type != '' or origin != ''}">清除条件</a>
 </form>
 
 <table>
@@ -48,9 +49,9 @@
         <td colspan="7" class="muted">没有符合条件的依赖关系，点上方"新增依赖"录入第一条（如 service-a → eureka / 注册配置）</td>
     </tr>
     <tr th:each="v : ${views}">
-        <!-- 依赖方：节点已被删的历史脏数据按"已删除"兜底 -->
+        <!-- 依赖方：节点已被 serviceAdmin 删除时按"已删除"兜底（边保留，可人工清理） -->
         <td>
-            <span th:if="${v.source == null}" class="muted">节点已删除（id=<span th:text="${v.dep.sourceId}">0</span>）</span>
+            <span th:if="${v.source == null}" class="muted">节点已删除（<span th:text="${v.dep.sourceName}">?</span>）</span>
             <span th:if="${v.source != null}">
                 <b th:text="${v.source.serviceName}">service-admin</b>
                 <span class="muted" th:if="${v.source.serviceNameCn != null and !v.source.serviceNameCn.isEmpty()}"
@@ -63,7 +64,7 @@
                   th:text="${v.dep.depType}">服务调用</span>
         </td>
         <td>
-            <span th:if="${v.target == null}" class="muted">节点已删除（id=<span th:text="${v.dep.targetId}">0</span>）</span>
+            <span th:if="${v.target == null}" class="muted">节点已删除（<span th:text="${v.dep.targetName}">?</span>）</span>
             <span th:if="${v.target != null}">
                 <b th:text="${v.target.serviceName}">user-admin</b>
                 <span class="muted" th:if="${v.target.serviceNameCn != null and !v.target.serviceNameCn.isEmpty()}"
@@ -81,8 +82,8 @@
                   style="padding:1px 8px;border-radius:10px;font-size:12px;background:#e8f8f0;color:#20bf6b;">手写</span>
         </td>
         <td class="muted" th:text="${v.dep.updatedAt != null} ? ${#temporals.format(v.dep.updatedAt, 'MM-dd HH:mm')} : '-'">09-26 10:00</td>
-        <td class="inline-form">
-            <a th:href="@{/admin/dependencies/form(id=${v.dep.id})}" style="color:#3742fa;">编辑</a>
+        <td>
+            <a th:href="@{/admin/dependencies/form(id=${v.dep.id})}">编辑</a>
             <form method="post" th:action="@{'/admin/dependencies/delete/' + ${v.dep.id}}" style="display:inline;"
                   onsubmit="return confirm('确认删除这条依赖关系？');">
                 <button type="submit" class="del">删除</button>

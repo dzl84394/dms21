@@ -1,16 +1,16 @@
-package com.dms21.serviceadmin.entity;
+package com.dms21.archadmin.entity;
 
 import java.util.List;
 
 /**
  * 微服务依赖关系类型常量（t_service_dependency.dep_type 的取值）
  *
- * 背景：依赖边表达"依赖方(source) → 被依赖方(target)"，target 可以是另一个微服务（t_service_group
- * 里的业务服务），也可以是数据库/MQ/注册中心等中间件节点。类型用于：
+ * 背景：依赖边表达"依赖方(source) → 被依赖方(target)"，target 可以是另一个微服务，
+ * 也可以是数据库/MQ/注册中心等中间件节点。类型用于：
  *   1. 列表页/后续 Mermaid 架构图上区分连线含义与颜色；
  *   2. 后续 trace 数据自动补边时按类型归并（HTTP 调用→服务调用，JDBC 跨度→数据库……）。
  *
- * 与 ServiceCategories 一样值直接存中文（页面下拉即字典），顺序即表单下拉/图例顺序。
+ * 值直接存中文（页面下拉即字典），顺序即表单下拉/图例顺序。
  *
  * 示例：
  *   DependencyTypes.CALL        // "服务调用"

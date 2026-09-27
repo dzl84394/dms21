@@ -1,4 +1,4 @@
-package com.dms21.serviceadmin.entity;
+package com.dms21.archadmin.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,9 +15,11 @@ import java.time.LocalDateTime;
 /**
  * 微服务依赖关系实体：一条有向边，表示"依赖方(source) → 被依赖方(target)"
  *
- * 节点不另建表：source/target 都指向 t_service_group 的 id —— 该表同库承载微服务（category=业务服务）
- * 与中间件（数据库/MQ/注册中心……），所以服务→服务、服务→中间件两类依赖都能用同一条边表达。
- * 按项目约定仅按 id 手动关联，不使用外键约束/@ManyToOne（节点删除时由 ServiceGroupService 级联清边）。
+ * 节点引用方式：source/target 存的是 serviceAdmin 侧 t_service_group.service_name
+ * （服务名，该列有唯一约束）。archAdmin 与 serviceAdmin 分库，跨库引用 id 无意义且脆弱
+ * （节点删除重建后 id 会变），服务名是稳定业务键，后续 Mermaid 画图也直接用名字。
+ * 节点主数据不在本服务维护：列表/表单用的节点清单由 NodeClient 调 serviceAdmin
+ * /api/nodes 实时拉取；节点被删后本表边按"节点已删除"兜底展示，不做级联删除。
  *
  * 数据来源（origin 列）：
  *   手写     —— 人工在"依赖关系"页面录入（本期唯一人工来源）
@@ -25,19 +27,19 @@ import java.time.LocalDateTime;
  *
  * 表结构（H2 自动建表，ddl-auto: update）：
  *   T_SERVICE_DEPENDENCY
- *   ┌────┬───────────┬───────────┬──────────┬──────────────────────┬────────┬───────────┬───────────┐
- *   │ id │ source_id │ target_id │ dep_type │ detail（关系说明）    │ origin │ created_at│ updated_at│
- *   ├────┼───────────┼───────────┼──────────┼──────────────────────┼────────┼───────────┼───────────┤
- *   │ 1  │     2     │    66     │ 服务调用  │ 登录认证 /verify      │ 手写   │   ...     │   ...     │
- *   │ 2  │     2     │    70     │ 注册配置  │ Eureka 注册与发现     │ 手写   │   ...     │   ...     │
- *   └────┴───────────┴───────────┴──────────┴──────────────────────┴────────┴───────────┴───────────┘
- *   唯一约束 uk_dep_edge (source_id, target_id, dep_type)：同一对节点的同类型依赖只有一条，
+ *   ┌────┬─────────────┬─────────────┬──────────┬──────────────────────┬────────┬───────────┬───────────┐
+ *   │ id │ source_name │ target_name │ dep_type │ detail（关系说明）    │ origin │ created_at│ updated_at│
+ *   ├────┼─────────────┼─────────────┼──────────┼──────────────────────┼────────┼───────────┼───────────┤
+ *   │ 1  │ service-admin│ user-admin │ 服务调用  │ 登录认证 /verify      │ 手写   │   ...     │   ...     │
+ *   │ 2  │ service-admin│ eureka     │ 注册配置  │ Eureka 注册与发现     │ 手写   │   ...     │   ...     │
+ *   └────┴─────────────┴─────────────┴──────────┴──────────────────────┴────────┴───────────┴───────────┘
+ *   唯一约束 uk_dep_edge (source_name, target_name, dep_type)：同一对节点的同类型依赖只有一条，
  *   不同说明合并到 detail；不同类型（如同时"服务调用"+"消息队列"）允许各有一条。
  *
  * 示例：
  *   ServiceDependencyEntity e = new ServiceDependencyEntity();
- *   e.setSourceId(2L);                 // service-admin
- *   e.setTargetId(66L);                // user-admin
+ *   e.setSourceName("service-admin");
+ *   e.setTargetName("user-admin");
  *   e.setDepType(DependencyTypes.CALL);
  *   e.setDetail("登录认证：POST /api/auth/verify");
  *   e.setOrigin(ServiceDependencyEntity.ORIGIN_MANUAL);
@@ -46,7 +48,7 @@ import java.time.LocalDateTime;
 @Table(name = "t_service_dependency",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_dep_edge",
-                columnNames = {"source_id", "target_id", "dep_type"}))
+                columnNames = {"source_name", "target_name", "dep_type"}))
 public class ServiceDependencyEntity {
 
     /** 来源：人工录入 */
@@ -60,13 +62,13 @@ public class ServiceDependencyEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 依赖方节点 id（t_service_group.id，调用方/使用方），必填 */
-    @Column(name = "source_id", nullable = false)
-    private Long sourceId;
+    /** 依赖方节点服务名（t_service_group.service_name，调用方/使用方），必填 */
+    @Column(name = "source_name", nullable = false, length = 128)
+    private String sourceName;
 
-    /** 被依赖方节点 id（t_service_group.id，被调用的服务 / 数据库 / MQ / 注册中心……），必填 */
-    @Column(name = "target_id", nullable = false)
-    private Long targetId;
+    /** 被依赖方节点服务名（被调用的服务 / 数据库 / MQ / 注册中心……），必填 */
+    @Column(name = "target_name", nullable = false, length = 128)
+    private String targetName;
 
     /** 依赖类型，取值见 DependencyTypes（服务调用/消息队列/数据库/缓存/注册配置/其他），必填 */
     @Column(name = "dep_type", nullable = false, length = 32)
@@ -111,20 +113,20 @@ public class ServiceDependencyEntity {
         this.id = id;
     }
 
-    public Long getSourceId() {
-        return sourceId;
+    public String getSourceName() {
+        return sourceName;
     }
 
-    public void setSourceId(Long sourceId) {
-        this.sourceId = sourceId;
+    public void setSourceName(String sourceName) {
+        this.sourceName = sourceName;
     }
 
-    public Long getTargetId() {
-        return targetId;
+    public String getTargetName() {
+        return targetName;
     }
 
-    public void setTargetId(Long targetId) {
-        this.targetId = targetId;
+    public void setTargetName(String targetName) {
+        this.targetName = targetName;
     }
 
     public String getDepType() {

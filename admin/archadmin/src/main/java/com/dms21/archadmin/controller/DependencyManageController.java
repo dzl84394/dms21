@@ -1,10 +1,9 @@
-package com.dms21.serviceadmin.controller;
+package com.dms21.archadmin.controller;
 
-import com.dms21.serviceadmin.entity.DependencyTypes;
-import com.dms21.serviceadmin.entity.ServiceDependencyEntity;
-import com.dms21.serviceadmin.entity.ServiceGroupEntity;
-import com.dms21.serviceadmin.service.ServiceDependencyService;
-import com.dms21.serviceadmin.service.ServiceGroupService;
+import com.dms21.archadmin.client.NodeClient;
+import com.dms21.archadmin.entity.DependencyTypes;
+import com.dms21.archadmin.entity.ServiceDependencyEntity;
+import com.dms21.archadmin.service.ServiceDependencyService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,8 +17,9 @@ import java.util.List;
 /**
  * 微服务依赖关系管理（架构管理的一部分；后续 Mermaid 架构图的数据源）
  *
- * 模型：节点复用 t_service_group（微服务 + 中间件同表），边存 t_service_dependency，
- *       一条边 = "依赖方(source) → 被依赖方(target)"，带类型/说明/来源（手写、trace自动）。
+ * 模型：节点主数据在 serviceAdmin（微服务映射 + 中间件），本服务只存边
+ *       t_service_dependency（按服务名引用），一条边 = "依赖方(source) → 被依赖方(target)"，
+ *       带类型/说明/来源（手写、trace自动）。
  *
  * 路由：
  *   GET  /admin/dependencies        依赖边列表（支持按关键字/类型/来源过滤）
@@ -27,26 +27,26 @@ import java.util.List;
  *   POST /admin/dependencies/save   保存（校验失败回表单并显示错误）
  *   POST /admin/dependencies/delete/{id}  删除一条边
  *
- * 打开列表页时先 syncFromRegistry() 让新上线服务成为可选节点，再 ensureSeedData()
- * 幂等补齐当前环境的基础依赖（eureka/H2 等），与子系统页的"打开即同步"约定一致。
+ * 打开列表页时先 refresh 节点清单（新上线服务/新录中间件立即可选），
+ * 再 ensureSeedEdges() 幂等补齐当前环境的基础依赖（eureka/H2 等）。
  */
 @Controller
 @RequestMapping("/admin/dependencies")
 public class DependencyManageController {
 
     private final ServiceDependencyService dependencyService;
-    private final ServiceGroupService serviceGroupService;
+    private final NodeClient nodeClient;
 
     public DependencyManageController(ServiceDependencyService dependencyService,
-                                      ServiceGroupService serviceGroupService) {
+                                      NodeClient nodeClient) {
         this.dependencyService = dependencyService;
-        this.serviceGroupService = serviceGroupService;
+        this.nodeClient = nodeClient;
     }
 
     /**
      * 依赖关系列表页
      *
-     * 示例：浏览器打开 http://localhost:8083/admin/dependencies
+     * 示例：浏览器打开 http://localhost:8085/admin/dependencies
      *       只看服务调用  /admin/dependencies?type=服务调用
      *       只看手写边    /admin/dependencies?origin=手写
      */
@@ -55,9 +55,9 @@ public class DependencyManageController {
                        @RequestParam(required = false, defaultValue = "") String type,
                        @RequestParam(required = false, defaultValue = "") String origin,
                        Model model) {
-        // 先同步 Eureka 新服务（成为可选节点），再幂等补基础依赖种子
-        serviceGroupService.syncFromRegistry();
-        dependencyService.ensureSeedData();
+        // 先刷新节点清单（保证 join 展示用最新节点），再幂等补基础依赖种子
+        nodeClient.refresh();
+        dependencyService.ensureSeedEdges();
 
         model.addAttribute("views", dependencyService.listViews(q, type, origin));
         model.addAttribute("types", DependencyTypes.ALL);
@@ -78,10 +78,10 @@ public class DependencyManageController {
         if (id != null && dep == null) {
             return "redirect:/admin/dependencies";
         }
-        List<ServiceGroupEntity> nodes = dependencyService.nodeOptions();
+        List<NodeClient.Node> nodes = dependencyService.nodeOptions();
         model.addAttribute("dep", dep); // null=新增模式
-        model.addAttribute("bizNodes", nodes.stream().filter(ServiceGroupEntity::isBizService).toList());
-        model.addAttribute("mwNodes", nodes.stream().filter(n -> !n.isBizService()).toList());
+        model.addAttribute("bizNodes", nodes.stream().filter(NodeClient.Node::bizService).toList());
+        model.addAttribute("mwNodes", nodes.stream().filter(n -> !n.bizService()).toList());
         model.addAttribute("nodeLabels", dependencyService.nodeLabels(nodes));
         model.addAttribute("types", DependencyTypes.ALL);
         return "dependency_form";
@@ -91,32 +91,33 @@ public class DependencyManageController {
      * 保存依赖边。校验不通过（节点缺失/自依赖/重复/非法类型）时不跳走，
      * 回到表单页带错误提示并保留用户刚选的值（用 dep 临时对象回填）。
      *
-     * 示例：curl -X POST http://localhost:8083/admin/dependencies/save \
-     *         -d "sourceId=33" -d "targetId=3" -d "depType=服务调用" --data-urlencode "detail=下单查用户"
+     * 示例：curl -X POST http://localhost:8085/admin/dependencies/save \
+     *         -d "sourceName=service-a" -d "targetName=service-b" -d "depType=服务调用" \
+     *         --data-urlencode "detail=下单查库存"
      */
     @PostMapping("/save")
     public String save(@RequestParam(required = false) Long id,
-                       @RequestParam(required = false) Long sourceId,
-                       @RequestParam(required = false) Long targetId,
+                       @RequestParam(required = false) String sourceName,
+                       @RequestParam(required = false) String targetName,
                        @RequestParam(required = false) String depType,
                        @RequestParam(required = false) String detail,
                        Model model) {
         try {
-            dependencyService.save(id, sourceId, targetId, depType, detail,
+            dependencyService.save(id, sourceName, targetName, depType, detail,
                     ServiceDependencyEntity.ORIGIN_MANUAL); // 页面录入的一律是手写边
             return "redirect:/admin/dependencies";
         } catch (IllegalArgumentException ex) {
             // 回填表单：用未保存的临时实体保留输入，附错误信息
             ServiceDependencyEntity draft = new ServiceDependencyEntity();
             draft.setId(id);
-            draft.setSourceId(sourceId);
-            draft.setTargetId(targetId);
+            draft.setSourceName(sourceName);
+            draft.setTargetName(targetName);
             draft.setDepType(depType);
             draft.setDetail(detail);
-            List<ServiceGroupEntity> nodes = dependencyService.nodeOptions();
+            List<NodeClient.Node> nodes = dependencyService.nodeOptions();
             model.addAttribute("dep", draft);
-            model.addAttribute("bizNodes", nodes.stream().filter(ServiceGroupEntity::isBizService).toList());
-            model.addAttribute("mwNodes", nodes.stream().filter(n -> !n.isBizService()).toList());
+            model.addAttribute("bizNodes", nodes.stream().filter(NodeClient.Node::bizService).toList());
+            model.addAttribute("mwNodes", nodes.stream().filter(n -> !n.bizService()).toList());
             model.addAttribute("nodeLabels", dependencyService.nodeLabels(nodes));
             model.addAttribute("types", DependencyTypes.ALL);
             model.addAttribute("error", ex.getMessage());
@@ -125,9 +126,9 @@ public class DependencyManageController {
     }
 
     /**
-     * 删除一条依赖边（行内删除按钮）。只删边，不影响两端节点。
+     * 删除一条依赖边（行内删除按钮）。只删边，不影响节点（节点主数据在 serviceAdmin）。
      *
-     * 示例：curl -X POST http://localhost:8083/admin/dependencies/delete/5
+     * 示例：curl -X POST http://localhost:8085/admin/dependencies/delete/5
      */
     @PostMapping("/delete/{id}")
     public String delete(@PathVariable Long id) {

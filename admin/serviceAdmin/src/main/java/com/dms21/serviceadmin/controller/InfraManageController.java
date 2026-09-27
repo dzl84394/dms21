@@ -119,6 +119,18 @@ public class InfraManageController {
     }
 
     /**
+     * 依赖关系管理：已迁移到 archAdmin 子系统（8085，边按服务名引用本服务的节点主数据），
+     * 这里保留旧路径做 302，兼容书签/历史链接。
+     *
+     * 示例：浏览器打开 http://localhost:8083/admin/dependencies
+     *       → 302 http://localhost:8085/admin/dependencies
+     */
+    @GetMapping("/dependencies")
+    public String dependencies() {
+        return "redirect:" + archAdminUrl + "/admin/dependencies";
+    }
+
+    /**
      * 中间件管理页：中间件与微服务同表存储（t_service_group），靠大类字段区分页面归属
      * 本页只展示大类≠业务服务的记录（数据库 / MQ / 非关系数据库 / 流量网关 / 接口网关 / 注册配置中心）
      *
