@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('子系统清单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('__list__')}"></div>
+
+<main class="content">
+<h1>子系统清单</h1>
+<p class="desc">
+    子系统清单通过接口实时取自 serviceAdmin（来源为各微服务 Eureka metadata 的 <code>subsystem</code>），
+    本服务不维护子系统主数据。点击"架构图"进入该子系统，维护它的技术/数据/部署三类架构图。
+</p>
+
+<table>
+    <thead>
+    <tr>
+        <th style="width:160px;">子系统编码</th>
+        <th style="width:220px;">名称</th>
+        <th style="width:160px;">业务领域</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(list)}">
+        <td colspan="4" class="muted">
+            暂未拉到子系统。请确认 serviceAdmin(8083) 已启动且已有微服务注册，稍后刷新本页
+            （清单每 30 秒自动过期重拉）。
+        </td>
+    </tr>
+    <tr th:each="s : ${list}">
+        <td><b th:text="${s.code}">admin</b></td>
+        <td th:text="${s.name != null and !s.name.isEmpty()} ? ${s.name} : '-'">平台管理子系统</td>
+        <td class="muted" th:text="${s.bizGroup != null and !s.bizGroup.isEmpty()} ? ${s.bizGroup} : '-'">platform</td>
+        <td>
+            <a th:href="@{'/admin/subsystems/' + ${s.code}}">架构图管理 →</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<!--
+  公共布局 fragment（Thymeleaf），archAdmin 所有页面共用：
+  样式与 serviceAdmin / userAdmin 一致；侧边栏为"子系统清单"（数据由 SidebarAdvice 从
+  serviceAdmin 的 /api/subsystems 拉取后注入），选中子系统后进入它的三类架构图。
+
+  用法：
+    <head th:replace="~{fragments/layout :: head('子系统清单', false)}"></head>
+    <div th:replace="~{fragments/layout :: sidebar('__list__')}"></div>   清单页
+    <div th:replace="~{fragments/layout :: sidebar(subsystem.code)}"></div> 详情/编辑页
+  active 取值：'__list__' 高亮"子系统清单"；传子系统 code 高亮对应子系统
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:fragment="head(title, refresh)">
+    <meta charset="UTF-8">
+    <meta th:if="${refresh}" http-equiv="refresh" content="30">
+    <title th:text="${title}">archAdmin</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+               background: #f5f6fa; color: #2f3542; }
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+                   background: #2f3542; color: #c8ccd4; padding: 18px 0; overflow-y: auto; }
+        .sidebar .brand { font-size: 16px; font-weight: 700; color: #fff;
+                          padding: 0 20px 16px; border-bottom: 1px solid #414957; }
+        .sidebar .main-nav { padding: 12px 0; }
+        .sidebar a { display: flex; justify-content: space-between; align-items: center;
+                     padding: 9px 20px; color: #c8ccd4; text-decoration: none; font-size: 13px;
+                     gap: 8px; }
+        .sidebar a span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sidebar a:hover { background: #3a4250; color: #fff; }
+        .sidebar a.on { background: #3742fa; color: #fff; }
+        .sidebar .tree-title { font-size: 12px; color: #808a99; padding: 14px 20px 6px; }
+        .sidebar a .count { background: #414957; color: #c8ccd4; border-radius: 9px;
+                          padding: 1px 8px; font-size: 11px; flex: none; }
+        .sidebar a.on .count, .sidebar a:hover .count { background: rgba(255,255,255,.25); color: #fff; }
+        .content { margin-left: 220px; padding: 24px 28px; min-width: 900px; }
+        h1 { font-size: 20px; margin-bottom: 6px; }
+        h2 { font-size: 15px; margin: 0 0 12px; }
+        .desc { color: #747d8c; font-size: 13px; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px;
+                border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+        th { background: #2f3542; color: #fff; text-align: left; padding: 9px 12px;
+             font-weight: 500; white-space: nowrap; }
+        td { padding: 8px 12px; border-top: 1px solid #f1f2f6; }
+        tbody tr:hover td { background: #f1f2f6; }
+        .card { background: #fff; border-radius: 10px; padding: 16px 20px;
+                box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 18px; }
+        input[type=text], textarea, select {
+            padding: 5px 8px; border: 1px solid #ced6e0;
+            border-radius: 6px; font-size: 13px; background: #fff; }
+        textarea { width: 100%; font-family: "SF Mono", Menlo, Consolas, monospace;
+                   font-size: 12.5px; line-height: 1.6; resize: vertical; }
+        button { padding: 5px 14px; border: none; border-radius: 6px; cursor: pointer;
+                 background: #2f3542; color: #fff; font-size: 12px; }
+        button:hover { opacity: .85; }
+        .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px;
+                   font-size: 13px; flex-wrap: wrap; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 12px; color: #fff; }
+        .ok   { background: #2ed573; }
+        .gray { background: #a4b0be; }
+        .muted { color: #a4b0be; }
+        .muted a, a.muted { color: #747d8c; }
+        a { color: #3742fa; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        /* 子系统详情页三类图的卡片网格 */
+        .diag-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .diag-card { background: #fff; border-radius: 10px; padding: 18px 20px;
+                     box-shadow: 0 1px 4px rgba(0,0,0,.06); display: flex; flex-direction: column; gap: 10px; }
+        .diag-card .t { font-size: 15px; font-weight: 600; }
+        .diag-card .meta { font-size: 12px; color: #a4b0be; flex: 1; }
+        .diag-card .act a { margin-right: 14px; }
+        .breadcrumb { font-size: 12px; color: #a4b0be; margin-bottom: 10px; }
+        .tip { background: #fffbe6; border-left: 4px solid #faad14; border-radius: 4px;
+               padding: 10px 14px; font-size: 12.5px; color: #7a6500; margin-top: 12px; line-height: 1.7; }
+        .ok-tip { background: #f6ffed; border-left: 4px solid #52c41a; border-radius: 4px;
+                  padding: 10px 14px; font-size: 13px; color: #389e0d; margin-bottom: 14px; }
+        code { background: #f1f2f6; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+
+<!--
+  左侧导航 fragment：标题"子系统清单"+ 动态子系统列表（来自 serviceAdmin 接口）
+  点子系统 → 该子系统详情（三类架构图入口）；点子系统都在本服务内跳转
+-->
+<div class="sidebar" th:fragment="sidebar(activeCode)">
+    <div class="brand">archAdmin</div>
+    <nav class="main-nav">
+        <div class="tree-title">架构管理</div>
+        <a th:href="@{/admin/subsystems}" th:classappend="${activeCode == '__list__'} ? 'on'">
+            <span>子系统清单</span>
+        </a>
+        <div class="tree-title">子系统</div>
+        <a th:if="${#lists.isEmpty(subsystems)}" class="muted" style="cursor:default;">
+            <span>暂未拉到子系统</span>
+        </a>
+        <a th:each="s : ${subsystems}"
+           th:href="@{'/admin/subsystems/' + ${s.code}}"
+           th:classappend="${activeCode == s.code} ? 'on'"
+           th:title="${s.code}">
+            <span th:text="${s.displayName()}">平台管理子系统</span>
+            <!-- 有中文名时右侧挂编码小徽章；没中文名时编码已作为主名显示，不重复挂 -->
+            <span class="count" th:if="${s.name != null and !s.name.isEmpty()}" th:text="${s.code}">admin</span>
+        </a>
+    </nav>
+    <!-- 返回主服务：跳回 serviceAdmin 首页（SSO 已打通，Cookie 全域生效免登录） -->
+    <nav class="main-nav">
+        <a href="http://localhost:8083/admin"><span>返回主服务</span><span class="count">8083</span></a>
+    </nav>
+    <!-- 退出登录：跳 serviceAdmin 统一登出，清除 DMS_TOKEN -->
+    <nav class="main-nav">
+        <a href="http://localhost:8083/logout"><span>退出登录</span></a>
+    </nav>
+</div>
+</html>

@@ -39,6 +39,9 @@ auth:
 # userAdmin 页面地址：侧边栏"用户管理"跨服务跳转用（登录后 Cookie 直接生效）
 useradmin:
   url: http://localhost:8084
+# archAdmin 页面地址：侧边栏"架构管理"跨服务跳转用（登录后 Cookie 直接生效）
+archadmin:
+  url: http://localhost:8085
 
 # 注册到 Eureka（baseDemo/eureka）
 eureka:

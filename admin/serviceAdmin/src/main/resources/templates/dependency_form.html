@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- 公共 head（样式）+ 左侧导航，active=dependencies 高亮 -->
+<head th:replace="~{fragments/layout :: head('依赖关系表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('dependencies')}"></div>
+
+<main class="content">
+<!-- 共用表单：dep 为 null 或 dep.id 为空是新增模式，带 id 是编辑模式 -->
+<h1 th:text="${dep == null or dep.id == null} ? '新增依赖关系' : '编辑依赖关系'">新增依赖关系</h1>
+<p class="desc">
+    一条记录表示"依赖方依赖被依赖方"。依赖方和被依赖方都可以是微服务或中间件节点
+    （下拉按"业务服务 / 中间件"分组）；同两个节点的同一类型依赖只能有一条。
+</p>
+
+<!-- 校验失败时回显错误（save 捕获 IllegalArgumentException 后带 error 回到本页） -->
+<div class="card" th:if="${error != null}" style="border-left:4px solid #eb3b5a;background:#fff5f6;margin-bottom:12px;">
+    <b style="color:#eb3b5a;">保存失败：</b><span th:text="${error}">错误信息</span>
+</div>
+
+<div class="card">
+    <form method="post" action="/admin/dependencies/save">
+        <input type="hidden" name="id" th:if="${dep != null and dep.id != null}" th:value="${dep.id}">
+
+        <table>
+            <tbody>
+            <tr>
+                <td style="width:130px;">依赖方（必选）</td>
+                <td>
+                    <select name="sourceId" required style="min-width:320px;">
+                        <option value="" disabled th:selected="${dep?.sourceId == null}">选择依赖方（谁发起依赖）</option>
+                        <optgroup label="业务服务（微服务）">
+                            <option th:each="n : ${bizNodes}" th:value="${n.id}"
+                                    th:text="${nodeLabels[n.id]}"
+                                    th:selected="${dep?.sourceId == n.id}">service-a</option>
+                        </optgroup>
+                        <optgroup label="中间件">
+                            <option th:each="n : ${mwNodes}" th:value="${n.id}"
+                                    th:text="${nodeLabels[n.id]}"
+                                    th:selected="${dep?.sourceId == n.id}">eureka［注册配置中心 / Eureka］</option>
+                        </optgroup>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>被依赖方（必选）</td>
+                <td>
+                    <select name="targetId" required style="min-width:320px;">
+                        <option value="" disabled th:selected="${dep?.targetId == null}">选择被依赖方（被调用的服务 / DB / MQ / 注册中心）</option>
+                        <optgroup label="业务服务（微服务）">
+                            <option th:each="n : ${bizNodes}" th:value="${n.id}"
+                                    th:text="${nodeLabels[n.id]}"
+                                    th:selected="${dep?.targetId == n.id}">user-admin</option>
+                        </optgroup>
+                        <optgroup label="中间件">
+                            <option th:each="n : ${mwNodes}" th:value="${n.id}"
+                                    th:text="${nodeLabels[n.id]}"
+                                    th:selected="${dep?.targetId == n.id}">mysql-prod［数据库 / MySQL］</option>
+                        </optgroup>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>依赖类型（必选）</td>
+                <td>
+                    <select name="depType" required>
+                        <option value="" disabled th:selected="${dep?.depType == null or dep.depType.isEmpty()}">选择类型</option>
+                        <option th:each="t : ${types}" th:value="${t}" th:text="${t}"
+                                th:selected="${dep?.depType == t}">服务调用</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>关系说明</td>
+                <td>
+                    <textarea name="detail" rows="3" style="width:420px;"
+                              placeholder="如：下单时调用库存扣减 / topic: order-created / H2 文件库 ./data/xxx"
+                              th:text="${dep?.detail}"></textarea>
+                </td>
+            </tr>
+            <tr th:if="${dep != null and dep.id != null}">
+                <td>数据来源</td>
+                <td class="muted">
+                    <!-- 来源由录入方式决定，页面不可修改；手写=人工维护，trace自动=链路追踪补边 -->
+                    <b th:text="${dep.origin}">手写</b>（来源不可修改）
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:12px;">
+            <button type="submit">保存</button>
+            <a th:href="@{/admin/dependencies}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

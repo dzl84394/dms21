@@ -20,7 +20,7 @@ import java.util.Map;
  * 侧边栏（fragments/layout.html）分两段：
  *   main-nav（业务/架构）：
  *     GET /admin/subsystem    子系统管理（展示从服务映射聚合的子系统清单）
- *     GET /admin/architecture  架构图管理
+ *     GET /admin/architecture  架构图管理（302 到 archAdmin 8085 的技术架构图，本服务不再渲染）
  *     GET /admin/middleware    中间件管理
  *   gov-nav（"服务治理"小标题）：
  *     GET /admin/governance/scheduler  调度中心
@@ -34,6 +34,10 @@ import java.util.Map;
 public class InfraManageController {
 
     private final ServiceGroupService serviceGroupService;
+
+    /** archAdmin 地址（yml: archadmin.url）：架构图已迁移到 archAdmin 子系统，本地路由 302 过去 */
+    @org.springframework.beans.factory.annotation.Value("${archadmin.url:http://localhost:8085}")
+    private String archAdminUrl;
 
     public InfraManageController(ServiceGroupService serviceGroupService) {
         this.serviceGroupService = serviceGroupService;
@@ -103,14 +107,15 @@ public class InfraManageController {
     }
 
     /**
-     * 架构图管理页：维护系统架构图（整体架构、链路图等）
+     * 架构图管理：架构图功能已迁移到独立的 archAdmin 子系统（8085），
+     * 这里保留旧路径做 302，兼容书签/历史链接；侧边栏"架构图管理"也直接指向 archAdmin。
      *
      * 示例：浏览器打开 http://localhost:8083/admin/architecture
-     * 返回：architecture.html
+     *       → 302 http://localhost:8085/admin/subsystems
      */
     @GetMapping("/architecture")
     public String architecture() {
-        return "architecture";
+        return "redirect:" + archAdminUrl + "/admin/subsystems";
     }
 
     /**

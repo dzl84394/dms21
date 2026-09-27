@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('子系统架构图', false)}"></head>
+<body>
+<!-- 选中具体子系统，侧边栏高亮该 code -->
+<div th:replace="~{fragments/layout :: sidebar(subsystem.code)}"></div>
+
+<main class="content">
+<div class="breadcrumb">
+    <a th:href="@{/admin/subsystems}">子系统清单</a> /
+    <span th:text="${subsystem.displayName()}">平台管理子系统</span>
+</div>
+<h1>
+    <span th:text="${subsystem.displayName()}">平台管理子系统</span>
+    <span class="muted" style="font-size:13px;font-weight:normal;" th:text="'（' + ${subsystem.code} + '）'">（admin）</span>
+</h1>
+<p class="desc">选择要维护的架构图类别。图内容以 Mermaid 源码编辑，保存在架构管理服务自己的表中。</p>
+
+<div class="diag-grid">
+    <!-- 每类一张卡片：已编辑显示绿徽章+最后更新时间，未编辑显示灰徽章（items 由后端组装） -->
+    <div class="diag-card" th:each="item : ${items}">
+        <div class="t" th:text="${item.label}">技术架构图</div>
+        <div class="meta">
+            <span class="badge ok" th:if="${item.diagram != null}">已编辑</span>
+            <span class="badge gray" th:if="${item.diagram == null}">未编辑</span>
+            <span th:if="${item.diagram != null}" style="margin-left:8px;">
+                更新于 <span th:text="${#temporals.format(item.diagram.updatedAt, 'yyyy-MM-dd HH:mm')}">2026-09-26 11:00</span>
+                <span th:if="${item.diagram.updatedBy != null}" th:text="' · ' + ${item.diagram.updatedBy}"> · admin</span>
+            </span>
+        </div>
+        <div class="act">
+            <a th:href="@{'/admin/subsystems/' + ${subsystem.code} + '/diagram/' + ${item.type}}">
+                <span th:text="${item.diagram != null} ? '编辑' : '去绘制'">编辑</span> →
+            </a>
+        </div>
+    </div>
+</div>
+</main>
+</body>
+</html>

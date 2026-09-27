@@ -23,6 +23,10 @@ public class SidebarAdvice {
     @Value("${useradmin.url:http://localhost:8084}")
     private String userAdminUrl;
 
+    /** archAdmin 页面地址（yml: archadmin.url），侧边栏跨服务跳转"架构管理"用 */
+    @Value("${archadmin.url:http://localhost:8085}")
+    private String archAdminUrl;
+
     public SidebarAdvice(ServiceGroupService serviceGroupService) {
         this.serviceGroupService = serviceGroupService;
     }
@@ -46,5 +50,11 @@ public class SidebarAdvice {
     @ModelAttribute("userAdminUrl")
     public String userAdminUrl() {
         return userAdminUrl;
+    }
+
+    /** archAdmin 地址，侧边栏"架构管理"跨服务链接用（SSO 已打通，Cookie 直接生效） */
+    @ModelAttribute("archAdminUrl")
+    public String archAdminUrl() {
+        return archAdminUrl;
     }
 }

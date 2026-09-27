@@ -5,6 +5,7 @@ import com.dms21.serviceadmin.entity.ServiceCategories;
 import com.dms21.serviceadmin.entity.ServiceGroupEntity;
 import com.dms21.serviceadmin.entity.SubSystemDictEntity;
 import com.dms21.serviceadmin.repository.BizGroupDictRepository;
+import com.dms21.serviceadmin.repository.ServiceDependencyRepository;
 import com.dms21.serviceadmin.repository.ServiceGroupRepository;
 import com.dms21.serviceadmin.repository.SubSystemDictRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -43,15 +44,19 @@ public class ServiceGroupService {
     private final BizGroupDictRepository dictRepository;
     private final SubSystemDictRepository subSystemDictRepository;
     private final MonitorService monitorService;
+    /** 依赖边仓库：删除微服务/中间件节点时级联清理相连的依赖边，避免留下指向空节点的悬空边 */
+    private final ServiceDependencyRepository dependencyRepository;
 
     public ServiceGroupService(ServiceGroupRepository repository,
                                BizGroupDictRepository dictRepository,
                                SubSystemDictRepository subSystemDictRepository,
-                               MonitorService monitorService) {
+                               MonitorService monitorService,
+                               ServiceDependencyRepository dependencyRepository) {
         this.repository = repository;
         this.dictRepository = dictRepository;
         this.subSystemDictRepository = subSystemDictRepository;
         this.monitorService = monitorService;
+        this.dependencyRepository = dependencyRepository;
     }
 
     /**
@@ -278,10 +283,13 @@ public class ServiceGroupService {
     }
 
     /**
-     * 按主键删除
+     * 按主键删除微服务/中间件节点。
+     * 同时删除以该节点为依赖方或被依赖方的全部依赖边（t_service_dependency 不建外键约束，
+     * 级联由应用层保证），否则依赖图里会留下指向不存在节点的悬空边。
      */
     @Transactional
     public void delete(Long id) {
+        dependencyRepository.deleteByNodeId(id);
         repository.deleteById(id);
     }
 

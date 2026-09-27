@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('架构图编辑', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar(subsystem.code)}"></div>
+
+<main class="content">
+<div class="breadcrumb">
+    <a th:href="@{/admin/subsystems}">子系统清单</a> /
+    <a th:href="@{'/admin/subsystems/' + ${subsystem.code}}" th:text="${subsystem.displayName()}">平台管理子系统</a>
+    / <span th:text="${typeLabel}">技术架构图</span>
+</div>
+<h1>
+    <span th:text="${subsystem.displayName()}">平台管理子系统</span>
+    <span class="muted" style="font-size:14px;font-weight:normal;" th:text="'· ' + ${typeLabel}">· 技术架构图</span>
+</h1>
+<p class="desc">
+    编辑 Mermaid 源码并保存到架构管理库（<code>t_arch_diagram</code>，按"子系统 + 图类型"唯一，反复保存更新同一行）。
+    图形渲染后续接入，当前先把图内容维护好。
+</p>
+
+<!-- 保存成功提示（POST 保存后 controller 带 saved=true 回本页） -->
+<div class="ok-tip" th:if="${saved}">
+    已保存。最后更新时间见下方；可继续修改后再次保存。
+</div>
+
+<div class="card">
+    <form method="post" th:action="@{'/admin/subsystems/' + ${subsystem.code} + '/diagram/' + ${type} + '/save'}">
+        <div style="margin-bottom:10px;">
+            <label style="font-size:13px;">图标题（可空，默认用类型名）：</label><br>
+            <input type="text" name="title" maxlength="128" style="width:420px;margin-top:4px;"
+                   th:value="${diagram?.title}" th:placeholder="${typeLabel}">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label style="font-size:13px;">Mermaid 源码：</label>
+        </div>
+        <textarea name="content" rows="22" spellcheck="false"
+                  th:text="${diagram?.content}"
+                  placeholder="graph TD&#10;    A[接入层] --&gt; B[微服务层]&#10;    B --&gt; C[(H2 数据库)]"></textarea>
+
+        <div class="tip">
+            Mermaid 语法提示：流程图 <code>graph TD</code>（TD 自上而下 / LR 自左而右），
+            节点 <code>A[名称]</code>、菱形判断 <code>A{条件}</code>、连线 <code>A --&gt; B</code>；
+            时序图用 <code>sequenceDiagram</code>。一个 textarea 只放一张图的源码。
+        </div>
+
+        <div style="margin-top:14px;">
+            <button type="submit">保存</button>
+            <a th:href="@{'/admin/subsystems/' + ${subsystem.code}}" style="margin-left:12px;">取消返回</a>
+            <span class="muted" style="margin-left:16px;font-size:12px;"
+                  th:if="${diagram != null and diagram.updatedBy != null}">
+                上次更新：<span th:text="${diagram.updatedBy}">admin</span>
+                · <span th:text="${#temporals.format(diagram.updatedAt, 'yyyy-MM-dd HH:mm:ss')}">2026-09-26 11:00:00</span>
+            </span>
+        </div>
+    </form>
+</div>
+</main>
+</body>
+</html>
