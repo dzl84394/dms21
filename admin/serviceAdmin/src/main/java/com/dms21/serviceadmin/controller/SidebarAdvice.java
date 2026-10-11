@@ -27,6 +27,22 @@ public class SidebarAdvice {
     @Value("${archadmin.url:http://localhost:8085}")
     private String archAdminUrl;
 
+    /** projectAdmin 页面地址（yml: projectadmin.url），侧边栏跨服务跳转"项目管理"用 */
+    @Value("${projectadmin.url:http://localhost:8086}")
+    private String projectAdminUrl;
+
+    /** devopsAdmin 页面地址（yml: devopsadmin.url），侧边栏跨服务跳转"代码仓库"用 */
+    @Value("${devopsadmin.url:http://localhost:8087}")
+    private String devopsAdminUrl;
+
+    /** baseAdmin 页面地址（yml: baseadmin.url），侧边栏跨服务跳转"基础服务中心"用 */
+    @Value("${baseadmin.url:http://localhost:8088}")
+    private String baseAdminUrl;
+
+    /** commonAdmin 页面地址（yml: commonadmin.url），侧边栏跨服务跳转"公共能力平台"用 */
+    @Value("${commonadmin.url:http://localhost:8089}")
+    private String commonAdminUrl;
+
     public SidebarAdvice(ServiceGroupService serviceGroupService) {
         this.serviceGroupService = serviceGroupService;
     }
@@ -56,5 +72,29 @@ public class SidebarAdvice {
     @ModelAttribute("archAdminUrl")
     public String archAdminUrl() {
         return archAdminUrl;
+    }
+
+    /** projectAdmin 地址，侧边栏"项目管理"跨服务链接用（SSO 已打通，Cookie 直接生效） */
+    @ModelAttribute("projectAdminUrl")
+    public String projectAdminUrl() {
+        return projectAdminUrl;
+    }
+
+    /** devopsAdmin 地址，侧边栏"代码仓库"跨服务链接用（SSO 已打通，Cookie 直接生效） */
+    @ModelAttribute("devopsAdminUrl")
+    public String devopsAdminUrl() {
+        return devopsAdminUrl;
+    }
+
+    /** baseAdmin 地址，侧边栏"基础服务中心"跨服务链接用（SSO 已打通，Cookie 直接生效） */
+    @ModelAttribute("baseAdminUrl")
+    public String baseAdminUrl() {
+        return baseAdminUrl;
+    }
+
+    /** commonAdmin 地址，侧边栏"公共能力平台"跨服务链接用（SSO 已打通，Cookie 直接生效） */
+    @ModelAttribute("commonAdminUrl")
+    public String commonAdminUrl() {
+        return commonAdminUrl;
     }
 }

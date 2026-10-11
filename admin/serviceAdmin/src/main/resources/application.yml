@@ -42,6 +42,18 @@ useradmin:
 # archAdmin 页面地址：侧边栏"架构管理"跨服务跳转用（登录后 Cookie 直接生效）
 archadmin:
   url: http://localhost:8085
+# projectAdmin 页面地址：侧边栏"项目管理"跨服务跳转用（登录后 Cookie 直接生效）
+projectadmin:
+  url: http://localhost:8086
+# devopsAdmin 页面地址：侧边栏"代码仓库"跨服务跳转用（登录后 Cookie 直接生效）
+devopsadmin:
+  url: http://localhost:8087
+# baseAdmin 页面地址：侧边栏"基础服务中心"跨服务跳转用（登录后 Cookie 直接生效）
+baseadmin:
+  url: http://localhost:8088
+# commonAdmin 页面地址：侧边栏"公共能力平台"跨服务跳转用（登录后 Cookie 直接生效）
+commonadmin:
+  url: http://localhost:8089
 
 # 注册到 Eureka（baseDemo/eureka）
 eureka:

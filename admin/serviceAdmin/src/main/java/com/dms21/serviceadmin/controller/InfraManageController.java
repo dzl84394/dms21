@@ -39,6 +39,14 @@ public class InfraManageController {
     @org.springframework.beans.factory.annotation.Value("${archadmin.url:http://localhost:8085}")
     private String archAdminUrl;
 
+    /** commonAdmin 地址（yml: commonadmin.url）：调度/配置中心已迁至公共能力平台，本地旧路由 302 过去 */
+    @org.springframework.beans.factory.annotation.Value("${commonadmin.url:http://localhost:8089}")
+    private String commonAdminUrl;
+
+    /** baseAdmin 地址（yml: baseadmin.url）：网关/API 管理已并入基础服务中心，本地旧路由 302 过去 */
+    @org.springframework.beans.factory.annotation.Value("${baseadmin.url:http://localhost:8088}")
+    private String baseAdminUrl;
+
     public InfraManageController(ServiceGroupService serviceGroupService) {
         this.serviceGroupService = serviceGroupService;
     }
@@ -260,46 +268,40 @@ public class InfraManageController {
     // ---------- 服务治理 ----------
 
     /**
-     * 调度中心页：定时任务调度（任务列表、执行策略、执行记录）
-     *
-     * 示例：浏览器打开 http://localhost:8083/admin/governance/scheduler
-     * 返回：governance/scheduler.html
+     * 旧路由：调度中心归 baseAdmin(8088) 基础服务中心（注册/配置/调度已从 commonAdmin 回归），
+     * 302 保持老链接可用
+     * 示例：http://localhost:8083/admin/governance/scheduler → 302 → 8088/admin/scheduler
      */
     @GetMapping("/governance/scheduler")
     public String scheduler() {
-        return "governance/scheduler";
+        return "redirect:" + baseAdminUrl + "/admin/scheduler";
     }
 
     /**
-     * 配置中心页：各环境配置项管理（命名空间、配置集、版本）
-     *
-     * 示例：浏览器打开 http://localhost:8083/admin/governance/config
-     * 返回：governance/config.html
+     * 旧路由：配置中心归 baseAdmin(8088) 基础服务中心（注册/配置/调度已从 commonAdmin 回归），
+     * 302 保持老链接可用
+     * 示例：http://localhost:8083/admin/governance/config → 302 → 8088/admin/config
      */
     @GetMapping("/governance/config")
     public String config() {
-        return "governance/config";
+        return "redirect:" + baseAdminUrl + "/admin/config";
     }
 
     /**
-     * 网关页：网关实例状态与路由配置
-     *
-     * 示例：浏览器打开 http://localhost:8083/admin/governance/gateway
-     * 返回：governance/gateway.html
+     * 旧路由：网关已并入 baseAdmin(8088) 基础服务中心的 API 网关，302 保持老链接可用
+     * 示例：http://localhost:8083/admin/governance/gateway → 302 → 8088/admin/gateway
      */
     @GetMapping("/governance/gateway")
     public String gateway() {
-        return "governance/gateway";
+        return "redirect:" + baseAdminUrl + "/admin/gateway";
     }
 
     /**
-     * API 管理页：接口清单、分组、文档与发布状态
-     *
-     * 示例：浏览器打开 http://localhost:8083/admin/governance/api
-     * 返回：governance/api.html
+     * 旧路由：API 管理已并入 baseAdmin(8088) 基础服务中心，302 保持老链接可用
+     * 示例：http://localhost:8083/admin/governance/api → 302 → 8088/admin/api
      */
     @GetMapping("/governance/api")
     public String api() {
-        return "governance/api";
+        return "redirect:" + baseAdminUrl + "/admin/api";
     }
 }

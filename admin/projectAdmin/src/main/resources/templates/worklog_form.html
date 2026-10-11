@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('工时表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('worklogs')}"></div>
+
+<main class="content">
+<h1 th:text="${worklog != null} ? '编辑工时记录 #' + ${worklog.id} : '登记工时'">登记工时</h1>
+<p class="desc">
+    填写成员在某项目/需求上的工时投入。新增时成员默认取当前登录账号，日期默认今天。
+</p>
+
+<div class="card">
+    <form method="post" action="/admin/worklogs/save">
+        <input type="hidden" name="id" th:if="${worklog != null}" th:value="${worklog.id}">
+
+        <table style="max-width:520px;">
+            <tbody>
+            <tr>
+                <td style="width:110px;">工作日期 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="date" name="workDate" required
+                           th:value="${worklog != null} ? ${worklog.workDate} : ${today}"
+                           style="font-size:13px;padding:5px 8px;border:1px solid #ced6e0;border-radius:6px;">
+                </td>
+            </tr>
+            <tr>
+                <td>成员 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="member" required
+                           th:value="${worklog != null} ? ${worklog.member} : ${currentUser}"
+                           placeholder="如 张三" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>项目/需求 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="project" required
+                           th:value="${worklog?.project}" placeholder="如 订单中心二期" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>工时（小时） <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="number" name="hours" required min="0.5" max="24" step="0.5"
+                           th:value="${worklog?.hours}" placeholder="如 4"
+                           style="font-size:13px;padding:5px 8px;border:1px solid #ced6e0;border-radius:6px;width:120px;">
+                    <span class="muted">可填小数（如 2.5）</span>
+                </td>
+            </tr>
+            <tr>
+                <td>工作内容</td>
+                <td>
+                    <textarea name="content" rows="3" style="width:100%;"
+                              th:text="${worklog?.content}" placeholder="如 订单超时关单联调"></textarea>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:14px;">
+            <button type="submit" th:text="${worklog != null} ? '保存修改' : '提交登记'">提交登记</button>
+            <a th:href="@{/admin/worklogs}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

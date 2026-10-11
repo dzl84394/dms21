@@ -9,8 +9,7 @@
     <div th:replace="~{fragments/layout :: sidebar('dashboard')}"></div>
     active 参数用于高亮当前页：
       dashboard / groups / subsystem / services / middleware
-      （架构图/依赖关系均在 archAdmin:8085，入口在下方"系统管理"组的"架构管理"，无本服务 active 值）
-      gov-scheduler / gov-config / gov-gateway / gov-api（服务治理分组；统一存储为外链，无 active 值）
+      （架构图/依赖关系在 archAdmin:8085，权限管理在 userAdmin:8084，均为下方跨服务跳转链接，无本服务 active 值）
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head th:fragment="head(title, refresh)">
@@ -34,10 +33,6 @@
         .sidebar a:hover { background: #3a4250; color: #fff; }
         .sidebar a.on { background: #3742fa; color: #fff; }
         .sidebar .tree-title { font-size: 12px; color: #808a99; padding: 14px 20px 6px; }
-        /* 服务治理分组容器（小标题 tree-title 自带间距，这里只补底部留白） */
-        .sidebar .gov-nav { padding-bottom: 12px; }
-        /* 系统管理分组容器（跨服务链接：权限管理 → userAdmin，架构管理 → archAdmin） */
-        .sidebar .sys-nav { padding-bottom: 12px; }
         .sidebar .count { background: #414957; color: #c8ccd4; border-radius: 9px;
                           padding: 1px 8px; font-size: 11px; }
         .sidebar a.on .count, .sidebar a:hover .count { background: rgba(255,255,255,.25); color: #fff; }
@@ -94,9 +89,10 @@
 </head>
 
 <!--
-  左侧导航 fragment，分两段：
-    main-nav：Eureka 查看 / 业务领域管理 / 子系统管理 / 微服务管理 / 中间件管理
-    gov-nav：tree-title "服务治理" + 调度中心 / 统一存储（外链博文） / 配置中心 / 网关 / API 管理
+  左侧导航 fragment，分三段：
+    第一段 main-nav：本服务功能 —— Eureka 查看 / 业务领域管理 / 子系统管理 / 微服务管理 / 中间件管理
+    第二段 main-nav：跨服务跳转统一沉底（按端口排序，SSO 后 Cookie 直接生效）
+    第三段 main-nav：退出登录
   新增功能页面时在对应 nav 里加 <a>，并同步更新上方的 active 取值注释
   pendingCount > 0 时在"微服务管理"旁显示待确认数量提醒
 -->
@@ -120,35 +116,25 @@
             <span>中间件管理</span>
         </a>
     </nav>
-    <!-- 系统管理分组：权限管理（用户/角色/资源）在 userAdmin 用户中心；架构管理在 archAdmin（跨服务跳转，SSO 后 Cookie 直接生效） -->
-    <nav class="sys-nav">
-        <div class="tree-title">系统管理</div>
+    <!-- 跨服务跳转统一沉底（按端口排序）：权限管理(8084)/架构管理(8085)/项目与需求管理(8086)/DevOps(8087)/基础服务中心(8088)/公共能力(8089) -->
+    <nav class="main-nav">
         <a th:href="${userAdminUrl + '/admin/users'}">
             <span>权限管理</span><span class="count">8084</span>
         </a>
         <a th:href="${archAdminUrl + '/admin'}">
             <span>架构管理</span><span class="count">8085</span>
         </a>
-    </nav>
-    <!-- 服务治理分组：不可点击的小标题 + 功能入口（调度/存储外链/配置/网关/API） -->
-    <nav class="gov-nav">
-        <div class="tree-title">服务治理</div>
-        <a th:href="@{/admin/governance/scheduler}" th:classappend="${active == 'gov-scheduler'} ? 'on'">
-            <span>调度中心</span>
+        <a th:href="${projectAdminUrl + '/admin/projects'}">
+            <span>项目与需求管理</span><span class="count">8086</span>
         </a>
-        <!-- 统一存储：外链到作者 CSDN 博文（新标签页打开，不占用后台会话页） -->
-        <a href="https://blog.csdn.net/dzl84394/article/details/166646939?sharetype=blogdetail&amp;sharerId=166646939&amp;sharerefer=PC&amp;sharesource=dzl84394&amp;spm=1011.2480.3001.8118"
-           target="_blank" rel="noopener">
-            <span>统一存储</span>
+        <a th:href="${devopsAdminUrl + '/admin/repos'}">
+            <span>DevOps</span><span class="count">8087</span>
         </a>
-        <a th:href="@{/admin/governance/config}" th:classappend="${active == 'gov-config'} ? 'on'">
-            <span>配置中心</span>
+        <a th:href="${baseAdminUrl + '/admin/registry'}">
+            <span>基础服务中心</span><span class="count">8088</span>
         </a>
-        <a th:href="@{/admin/governance/gateway}" th:classappend="${active == 'gov-gateway'} ? 'on'">
-            <span>网关</span>
-        </a>
-        <a th:href="@{/admin/governance/api}" th:classappend="${active == 'gov-api'} ? 'on'">
-            <span>API 管理</span>
+        <a th:href="${commonAdminUrl + '/admin/docs'}">
+            <span>公共能力</span><span class="count">8089</span>
         </a>
     </nav>
     <!-- 退出登录：清除 DMS_TOKEN Cookie（localhost 全域生效，userAdmin 一并退出） -->

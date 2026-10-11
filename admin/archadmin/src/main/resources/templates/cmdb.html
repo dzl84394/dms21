@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<!-- CMDB 占位页：activeCode=cmdb 高亮侧边栏 -->
+<head th:replace="~{fragments/layout :: head('CMDB', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('cmdb')}"></div>
+
+<main class="content">
+<h1>CMDB</h1>
+<p class="desc">
+    配置管理数据库：统一登记主机、资源与应用等配置项（CI），维护环境、归属、状态及配置项之间的关系。
+    当前为占位页，具体维护能力待补充。
+</p>
+
+<div class="card">
+    <h2>配置项清单</h2>
+    <p class="muted">功能建设中：后续在此放 CI 表格（名称、类型、环境、归属、状态）与新增/编辑表单。</p>
+</div>
+</main>
+
+</body>
+</html>

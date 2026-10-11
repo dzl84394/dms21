@@ -95,6 +95,10 @@
         <a th:href="@{/admin/dependencies}" th:classappend="${activeCode == 'dependencies'} ? 'on'">
             <span>依赖关系</span>
         </a>
+        <!-- CMDB：自 projectAdmin 迁入，配置管理数据库（主机/资源/应用等 CI 登记） -->
+        <a th:href="@{/admin/cmdb}" th:classappend="${activeCode == 'cmdb'} ? 'on'">
+            <span>CMDB</span>
+        </a>
         <div class="tree-title">子系统</div>
         <a th:if="${#lists.isEmpty(subsystems)}" class="muted" style="cursor:default;">
             <span>暂未拉到子系统</span>

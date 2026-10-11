@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('工时管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('worklogs')}"></div>
+
+<main class="content">
+<h1>工时管理</h1>
+<p class="desc">
+    登记成员在项目/需求上的工时投入。支持按成员/项目过滤，底部自动汇总工时。
+    <a th:href="@{/admin/worklogs/form}" style="color:#3742fa;">+ 登记工时</a>
+</p>
+
+<!-- 过滤：GET 表单，条件改变后回车/点搜索即生效 -->
+<form method="get" action="/admin/worklogs" class="toolbar">
+    <input type="text" name="member" th:value="${member}" placeholder="成员" style="width:120px;">
+    <input type="text" name="project" th:value="${project}" placeholder="项目/需求" style="width:180px;">
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/worklogs}" th:if="${member != '' or project != ''}" style="color:#3742fa;">清除条件</a>
+    <span class="muted" style="margin-left:auto;">
+        合计工时：<b th:text="${totalHours}">0.0</b> 小时
+    </span>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>工作日期</th>
+        <th>成员</th>
+        <th>项目/需求</th>
+        <th>工时</th>
+        <th>工作内容</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(items)}">
+        <td colspan="7" class="muted">暂无工时记录，点上方"登记工时"录入第一条。</td>
+    </tr>
+    <tr th:each="e : ${items}">
+        <td th:text="${e.workDate}">2026-09-30</td>
+        <td th:text="${e.member}">张三</td>
+        <td th:text="${e.project}">订单中心二期</td>
+        <td th:text="${e.hours}">4.0</td>
+        <td th:text="${e.content != null and !e.content.isEmpty()} ? ${e.content} : '-'">-</td>
+        <td class="muted" th:text="${#temporals.format(e.updatedAt, 'MM-dd HH:mm')}">09-30 18:00</td>
+        <td class="inline-form">
+            <a th:href="@{/admin/worklogs/form(id=${e.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/worklogs/delete/' + ${e.id}}" style="display:inline;">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>

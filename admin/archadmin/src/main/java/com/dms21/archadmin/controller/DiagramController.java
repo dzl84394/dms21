@@ -47,6 +47,16 @@ public class DiagramController {
     }
 
     /**
+     * CMDB（自 projectAdmin 迁入，占位）：配置管理数据库，登记主机/资源/应用等配置项（CI）
+     *
+     * 示例：浏览器打开 http://localhost:8085/admin/cmdb
+     */
+    @GetMapping("/admin/cmdb")
+    public String cmdb() {
+        return "cmdb";
+    }
+
+    /**
      * 子系统清单页：每次打开强制刷新一次接口（新上线子系统立即可见）
      */
     @GetMapping("/admin/subsystems")

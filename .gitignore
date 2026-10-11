@@ -23,3 +23,6 @@ data/
 # Logs
 *.log
 logs/
+
+# Trae IDE 本地文档（规划草稿，不入库）
+.trae/
