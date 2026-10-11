@@ -37,6 +37,12 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-tracing-bridge-otel</artifactId>
         </dependency>
+        <!-- springdoc OpenAPI 3 + Swagger UI：访问 /swagger-ui.html 看接口文档，/v3/api-docs 看 JSON
+             版本由父 pom 的 springdoc-openapi-bom 统一管理 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
