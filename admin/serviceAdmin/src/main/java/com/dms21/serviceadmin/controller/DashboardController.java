@@ -51,6 +51,16 @@ public class DashboardController {
     }
 
     /**
+     * 默认域名根路径：302 到 Eureka 查看页（未登录会被 AuthFilter 接去登录页）
+     *
+     * 示例：浏览器打开 http://localhost:8083/ → 302 /admin →（未登录）→ /login
+     */
+    @GetMapping("/")
+    public String root() {
+        return "redirect:/admin";
+    }
+
+    /**
      * 组装服务清单：注册表（本地缓存）→ 按业务领域/关键字过滤 → 分页
      * 不发任何 actuator 请求，1000 个服务也是毫秒级渲染
      *
