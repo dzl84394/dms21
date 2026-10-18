@@ -1,0 +1,66 @@
+server:
+  port: 8090 # apiAdmin 端口
+
+spring:
+  application:
+    name: api-admin
+  thymeleaf:
+    cache: false # 开发期关缓存，改模板刷新即生效
+  # H2 内嵌数据库（文件模式）：空间/微服务/版本/Swagger 原文快照落盘在工作区根的 data/ 下
+  # 启动 cwd 必须是工作区根 /Users/zlding/workspace/dms21，否则会连到空库
+  datasource:
+    url: jdbc:h2:file:./data/apiadmin;AUTO_SERVER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update # 按实体自动建表/加列
+    open-in-view: false
+    show-sql: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# SSO 认证配置：secret 必须与 serviceAdmin 一致（验签同一把钥匙）
+# 未登录访问 /admin/* 会 302 到 serviceAdmin 的统一登录页
+auth:
+  secret: dms21-sso-secret-2026
+  cookie-name: DMS_TOKEN
+  login-url: http://localhost:8083/login
+
+# 注册到 Eureka（baseDemo/eureka）
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    healthcheck:
+      enabled: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    metadata-map:
+      bizGroup: platform # 归平台业务组
+      subsystem: admin   # 与 serviceAdmin/userAdmin/archAdmin 等同属 admin 子系统
+
+# Actuator 端点配置（与其他服务一致）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,httpexchanges,metrics,env,loggers
+  endpoint:
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+
+# 日志格式：在每行日志前加 [服务名,traceId,spanId]
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

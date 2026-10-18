@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<!-- Swagger 导入表单：空间→服务 级联下拉；版本选"当前版本"或填新版本号（自动创建为当前版本）；
+     文件选择后 FileReader 读入下方文本域，统一以 rawJson 字段提交（服务端不收 multipart） -->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('导入 Swagger', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('imports')}"></div>
+
+<main class="content">
+<h1>导入 Swagger</h1>
+<p class="desc">选择 空间 → 微服务 → 版本（选已有当前版本，或填新版本号自动创建为当前版本并归档旧当前版本）。</p>
+
+<div class="tip" th:if="${not #strings.isEmpty(error)}" th:text="${error}">提示</div>
+
+<div class="card" style="max-width:860px;">
+    <form method="post" th:action="@{/admin/imports/save}" id="importForm">
+        <p>
+            <label>空间 *</label><br>
+            <select id="nsSel" required style="width:300px;">
+                <option value="">请选择空间</option>
+                <option th:each="n : ${namespaces}" th:value="${n.id}"
+                        th:selected="${preNamespaceId != null and preNamespaceId == n.id}"
+                        th:text="${n.name + ' (' + n.code + ')'}">订单域</option>
+            </select>
+        </p>
+        <p>
+            <label>微服务 *</label><br>
+            <select name="serviceId" id="svcSel" required style="width:300px;">
+                <option value="">先选空间</option>
+            </select>
+        </p>
+        <p>
+            <label>版本（二选一）</label><br>
+            <span style="font-size:13px;color:#747d8c;">已有当前版本：</span>
+            <select name="versionId" id="verSel" style="width:180px;">
+                <option value="">不选</option>
+            </select>
+            <span style="font-size:13px;color:#747d8c;margin-left:14px;">或填新版本号：</span>
+            <input type="text" name="newVersion" id="newVer" placeholder="如 v1.2.0" maxlength="64"
+                   style="width:140px;">
+            <span class="muted" style="font-size:12px;">填了新版本号则忽略上方选择</span>
+        </p>
+        <p>
+            <label>swagger.json 文件</label><br>
+            <input type="file" id="fileInput" accept=".json,application/json"
+                   style="font-size:13px;">
+            <input type="hidden" name="fileName" id="fileName">
+            <span class="muted" style="font-size:12px;">选择文件自动读入下方文本域；也可直接粘贴 JSON</span>
+        </p>
+        <p>
+            <label>原文（rawJson）*</label><br>
+            <textarea name="rawJson" id="rawJson" rows="14" required
+                      placeholder='{"openapi":"3.0.1","info":{...}}'></textarea>
+        </p>
+        <p>
+            <button type="submit">导入</button>
+            <a th:href="@{/admin/imports}" style="margin-left:10px;color:#747d8c;">取消</a>
+        </p>
+    </form>
+</div>
+
+<script th:inline="javascript">
+/* 级联数据：空间 → 服务（全量，按空间过滤）；服务 → 当前版本下拉（归档版本禁止导入） */
+var allServices = /*[[${services}]]*/ [];
+var currentVersions = /*[[${currentVersions}]]*/ {};
+var preServiceId = /*[[${preServiceId}]]*/ null;
+var preVersionId = /*[[${preVersionId}]]*/ null;
+
+var nsSel = document.getElementById('nsSel');
+var svcSel = document.getElementById('svcSel');
+var verSel = document.getElementById('verSel');
+
+function fillServices() {
+    var nid = nsSel.value;
+    svcSel.innerHTML = '<option value="">请选择微服务</option>';
+    verSel.innerHTML = '<option value="">不选</option>';
+    if (!nid) return;
+    allServices.filter(function (s) { return String(s.namespaceId) === nid; })
+        .forEach(function (s) {
+            var opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name + ' (' + s.code + ')';
+            svcSel.appendChild(opt);
+        });
+    /* 从"再导一份"入口进入：反推预选服务 */
+    if (preServiceId && svcSel.querySelector('option[value="' + preServiceId + '"]')) {
+        svcSel.value = String(preServiceId);
+        fillVersions();
+    }
+}
+
+function fillVersions() {
+    verSel.innerHTML = '<option value="">不选</option>';
+    var sid = svcSel.value;
+    if (!sid) return;
+    (currentVersions[sid] || []).forEach(function (v) {
+        var opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = v.version;
+        verSel.appendChild(opt);
+    });
+    if (preVersionId && verSel.querySelector('option[value="' + preVersionId + '"]')) {
+        verSel.value = String(preVersionId);
+    }
+}
+
+/* 文件选择：FileReader 读入文本域，文件名记入隐藏字段（提交时随表单走） */
+document.getElementById('fileInput').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    if (!file) return;
+    document.getElementById('fileName').value = file.name;
+    var reader = new FileReader();
+    reader.onload = function () {
+        document.getElementById('rawJson').value = reader.result;
+    };
+    reader.readAsText(file);
+});
+
+nsSel.addEventListener('change', fillServices);
+svcSel.addEventListener('change', fillVersions);
+
+/* 页面加载后如有预选空间（?versionId= 入口），立即级联 */
+if (nsSel.value) fillServices();
+</script>
+</main>
+
+</body>
+</html>

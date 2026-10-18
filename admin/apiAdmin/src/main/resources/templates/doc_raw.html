@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!-- 快照原文查看页：swagger.json 原文只读展示（原文入库，不做结构化渲染） -->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('快照原文 - apiAdmin', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('imports')}"></div>
+
+<main class="content">
+<h1>Swagger 原文</h1>
+<p class="desc">
+    <span th:text="${namespace?.name} ?: '未知空间'">订单域</span> /
+    <b th:text="${service?.code} ?: '未知服务'">service-a</b> /
+    版本 <b th:text="${version?.version} ?: '-'">v1.0.0</b>
+    · 文件 <span th:text="${#strings.isEmpty(doc.fileName)} ? '-' : ${doc.fileName}">swagger.json</span>
+    · <span th:text="${#strings.isEmpty(doc.importedBy)} ? '-' : ${doc.importedBy}">zhangsan</span>
+    于 <span th:text="${#temporals.format(doc.importedAt, 'yyyy-MM-dd HH:mm:ss')}">2026-10-11 15:30:00</span> 导入
+    · <a th:href="@{/admin/versions/detail(id=${version.id})}" style="color:#3742fa;">返回版本详情</a>
+</p>
+
+<div class="tip" th:if="${not #strings.isEmpty(error)}" th:text="${error}">提示</div>
+
+<div class="card">
+    <div style="margin-bottom:10px;">
+        <form method="post" th:action="@{'/admin/imports/docs/' + ${doc.id} + '/parse'}" style="display:inline;">
+            <button type="submit"
+                    th:onclick="return confirm('将该快照解析为 API 清单（含参数），可重复执行覆盖。确定？');">
+                解析为 API 清单
+            </button>
+        </form>
+        <span class="muted" style="font-size:12px;margin-left:10px;">
+            从 paths 节点解析每个 operation 为一行 API，parameters 拆为参数子表
+        </span>
+    </div>
+    <textarea rows="26" readonly
+              style="font-family:Menlo,Consolas,monospace;background:#f7f8fa;"
+              th:text="${doc.rawJson}">{...}</textarea>
+</div>
+
+<div class="tip">
+    原样入库：导入时仅做 JSON 合法性校验，不做解析、改写或格式化，与上传文件逐字节一致（首尾空白除外）。
+    点上方"解析为 API 清单"可生成结构化 API 列表。
+</div>
+</main>
+
+</body>
+</html>

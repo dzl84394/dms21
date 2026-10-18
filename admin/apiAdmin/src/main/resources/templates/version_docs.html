@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!-- 版本详情页：版本信息 + 该版本的 Swagger 快照列表（查看原文 / 删除旧份 / 再导一份） -->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('版本详情 - apiAdmin', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('versions')}"></div>
+
+<main class="content">
+<h1>
+    版本详情
+    <span class="badge" th:classappend="${version.current} ? 'ok' : 'gray'"
+          th:text="${version.current} ? '当前' : '归档'">当前</span>
+</h1>
+<p class="desc">
+    <span th:text="${namespace?.name} ?: '未知空间'">订单域</span> /
+    <b th:text="${service?.name} ?: '未知服务'">订单服务</b> /
+    版本 <b th:text="${version.version}">v1.0.0</b>
+    · <a th:href="@{/admin/versions}" style="color:#3742fa;">返回版本列表</a>
+</p>
+
+<div class="tip" th:if="${not #strings.isEmpty(error)}" th:text="${error}">提示</div>
+
+<div class="card">
+    <h2>
+        Swagger 快照（<span th:text="${#lists.size(docs)}">2</span> 份，时间倒序）
+        <a th:if="${version.current}" th:href="@{/admin/imports/form(versionId=${version.id})}"
+           style="color:#3742fa;font-size:13px;margin-left:12px;">+ 再导一份</a>
+        <span th:unless="${version.current}" class="muted" style="font-size:13px;margin-left:12px;">
+            归档版本不可再导入
+        </span>
+    </h2>
+    <table>
+        <thead>
+        <tr>
+            <th>#</th>
+            <th>文件名</th>
+            <th>大小</th>
+            <th>导入人</th>
+            <th>导入时间</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:if="${#lists.isEmpty(docs)}">
+            <td colspan="6" class="muted">该版本还没有快照。</td>
+        </tr>
+        <tr th:each="d, st : ${docs}">
+            <td th:text="${st.count}">1</td>
+            <td th:text="${#strings.isEmpty(d.fileName)} ? '-' : ${d.fileName}">swagger.json</td>
+            <td><span th:text="${d.sizeKb()}">12</span> KB</td>
+            <td th:text="${#strings.isEmpty(d.importedBy)} ? '-' : ${d.importedBy}">zhangsan</td>
+            <td th:text="${#temporals.format(d.importedAt, 'yyyy-MM-dd HH:mm:ss')}">2026-10-11 15:30:00</td>
+            <td>
+                <a th:href="@{'/admin/imports/docs/' + ${d.id}}" style="color:#3742fa;">查看原文</a>
+                <form th:if="${version.current and st.count > 1}" method="post"
+                      th:action="@{'/admin/versions/docs/delete/' + ${d.id}}" style="display:inline;"
+                      onsubmit="return confirm('删除这份旧快照？');">
+                    <button type="submit" class="del">删除</button>
+                </form>
+                <span th:if="${!version.current}" class="muted" style="font-size:12px;">
+                    归档仅存这份
+                </span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="tip" th:if="${version.current}">
+    当前版本可多次导入保存多份快照（联调期间反复更新可追溯）；归档时自动只保留最新一份。
+</div>
+<div class="tip" th:unless="${version.current}">
+    归档版本只保留最新一份快照，不可删除该快照、不可再导入；如需清理请回版本列表删除整个归档版本。
+</div>
+</main>
+
+</body>
+</html>

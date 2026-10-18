@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!-- 空间管理列表页：接口管理一级分组，展示每个空间下的微服务数量 -->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('空间管理 - apiAdmin', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('namespaces')}"></div>
+
+<main class="content">
+<h1>空间管理</h1>
+<p class="desc">
+    namespace 空间是接口管理的一级分组（如"订单域"/"平台公共"），微服务挂在空间下，版本挂在服务下。
+    <a th:href="@{/admin/namespaces/form}" style="color:#3742fa;">+ 新增空间</a>
+</p>
+
+<!-- 操作提示（保存/删除被业务规则拒绝时回跳带来的黄条） -->
+<div class="tip" th:if="${not #strings.isEmpty(error)}" th:text="${error}">提示</div>
+
+<table>
+    <thead>
+    <tr>
+        <th>编码</th>
+        <th>名称</th>
+        <th>说明</th>
+        <th>微服务数</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(items)}">
+        <td colspan="6" class="muted">暂无空间，点上方"新增空间"创建第一个分组。</td>
+    </tr>
+    <tr th:each="n : ${items}">
+        <td><b th:text="${n.code}">order</b></td>
+        <td th:text="${n.name}">订单域</td>
+        <td class="muted" th:text="${#strings.isEmpty(n.description)} ? '-' : ${n.description}">-</td>
+        <td>
+            <span class="badge" th:classappend="${serviceCounts[n.id] > 0} ? 'ok' : 'gray'"
+                  th:text="${serviceCounts[n.id]} ?: 0">3</span>
+            <a th:if="${serviceCounts[n.id] > 0}"
+               th:href="@{/admin/services(namespaceId=${n.id})}" style="font-size:12px;">查看</a>
+        </td>
+        <td class="muted" th:text="${#temporals.format(n.updatedAt, 'yyyy-MM-dd HH:mm')}">2026-10-11 12:00</td>
+        <td>
+            <a th:href="@{/admin/namespaces/form(id=${n.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/namespaces/delete/' + ${n.id}}" style="display:inline;"
+                  onsubmit="return confirm('确定删除该空间？');">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="tip">
+    规则：空间下还有微服务时不可删除；层级结构为 空间 → 微服务 → 版本 → Swagger 原文快照。
+</div>
+</main>
+
+</body>
+</html>

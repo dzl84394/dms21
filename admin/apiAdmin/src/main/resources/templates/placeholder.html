@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!--
+  占位页（首期导航骨架共用）：5 个功能入口先指向本页，展示模块定位说明；
+  后续各功能落地真实页面时（列表 + 共用表单），把 PageController 对应路由的返回视图换掉即可。
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head(${name} + ' - apiAdmin', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar(${active})}"></div>
+<div class="content">
+    <h1 th:text="${name}">接口清单</h1>
+    <div class="desc" th:text="${desc}">模块定位说明</div>
+
+    <div class="card">
+        <h2>建设中</h2>
+        <p class="muted">数据模型与页面后续补充；本页为导航骨架占位。</p>
+        <div class="tip">
+            规划：列表页展示 + 新增/编辑共用表单；数据落 apiAdmin 自有 H2 库（./data/apiadmin）；
+            认证走平台 SSO（serviceAdmin 统一登录，DMS_TOKEN 全域共享）。
+        </div>
+    </div>
+</div>
+</body>
+</html>

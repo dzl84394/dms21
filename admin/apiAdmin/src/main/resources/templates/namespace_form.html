@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!-- 空间新增/编辑共用表单：ns 为空=新增模式，非空=编辑模式（编码可改，保存时校验唯一） -->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head(${ns == null} ? '新增空间' : '编辑空间', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('namespaces')}"></div>
+
+<main class="content">
+<h1 th:text="${ns == null} ? '新增空间' : '编辑空间'">新增空间</h1>
+<p class="desc">空间编码全局唯一（如 order / platform），名称为页面展示名。</p>
+
+<div class="tip" th:if="${not #strings.isEmpty(error)}" th:text="${error}">提示</div>
+
+<div class="card" style="max-width:640px;">
+    <form method="post" th:action="@{/admin/namespaces/save}">
+        <input type="hidden" name="id" th:value="${ns?.id}">
+        <p>
+            <label>编码 *</label><br>
+            <input type="text" name="code" th:value="${ns?.code}" required maxlength="64"
+                   placeholder="如 order" style="width:280px;">
+        </p>
+        <p>
+            <label>名称 *</label><br>
+            <input type="text" name="name" th:value="${ns?.name}" required maxlength="128"
+                   placeholder="如 订单域" style="width:280px;">
+        </p>
+        <p>
+            <label>说明</label><br>
+            <textarea name="description" rows="3" maxlength="500"
+                      placeholder="空间定位说明（可空）"
+                      th:text="${ns?.description}"></textarea>
+        </p>
+        <p>
+            <button type="submit">保存</button>
+            <a th:href="@{/admin/namespaces}" style="margin-left:10px;color:#747d8c;">取消</a>
+        </p>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

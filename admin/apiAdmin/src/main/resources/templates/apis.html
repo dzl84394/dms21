@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!-- API 清单页：某快照解析出的 operation 列表，行内展开参数 -->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('API 清单 - apiAdmin', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('apis')}"></div>
+
+<main class="content">
+<h1>API 清单</h1>
+<p class="desc" th:if="${doc != null}">
+    快照 <b th:text="${doc.fileName} ?: '- ${doc.id}'">swagger.json</b>
+    （<span th:text="${service?.code} ?: '-'">service-a</span> /
+    <span th:text="${version?.version} ?: '-'">v1.0.0</span>）
+    解析出的接口清单。
+    <a th:href="@{'/admin/imports/docs/' + ${doc.id}}" style="color:#3742fa;">查看原文</a>
+    · <a href="/admin/apis" style="color:#3742fa;">查看全部</a>
+</p>
+<p class="desc" th:if="${doc == null}">
+    全部快照解析出的接口聚合视图（共 <b th:text="${#lists.size(apis)}">0</b> 个）。
+    到 <a href="/admin/imports" style="color:#3742fa;">导入历史</a> 选快照可解析新接口。
+</p>
+
+<div class="tip" th:if="${param.parsed}" th:text="${param.parsed}">已解析 N 个接口</div>
+
+<div class="card">
+<table>
+    <thead>
+    <tr>
+        <th style="width:80px;">方法</th>
+        <th>路径</th>
+        <th>说明</th>
+        <th style="width:120px;">标签</th>
+        <th style="width:100px;">参数</th>
+        <th th:if="${doc == null}" style="width:160px;">来源快照</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(apis)}">
+        <td th:colspan="${doc == null ? 6 : 5}" class="muted">
+            还没有解析出 API。到<a href="/admin/imports" style="color:#3742fa;">导入历史</a>选快照→原文→"解析为 API 清单"。
+        </td>
+    </tr>
+    <tr th:each="api : ${apis}">
+        <td>
+            <span class="badge"
+                  th:classappend="${api.method == 'GET'} ? 'ok' :
+                                    (${api.method == 'POST'} ? 'blue' :
+                                     (${api.method == 'PUT'} ? 'orange' :
+                                      (${api.method == 'DELETE'} ? 'red' : 'gray')))"
+                  th:text="${api.method}">GET</span>
+        </td>
+        <td>
+            <code th:text="${api.path}">/orders/{id}</code>
+            <div th:if="${api.deprecated}" class="muted" style="font-size:12px;color:#ee5253;">已废弃</div>
+            <div th:if="${not #strings.isEmpty(api.operationId)}" class="muted" style="font-size:12px;"
+                 th:text="'operationId: ' + ${api.operationId}">operationId: getOrder</div>
+        </td>
+        <td>
+            <span th:text="${api.summary} ?: '-'">查询订单</span>
+            <div class="muted" style="font-size:12px;margin-top:2px;"
+                 th:if="${not #strings.isEmpty(api.description)}" th:text="${api.description}">-</div>
+        </td>
+        <td class="muted" style="font-size:12px;" th:text="${api.tags} ?: '-'">["order"]</td>
+        <td>
+            <details>
+                <summary th:text="${(paramsByApi[api.id] != null ? #lists.size(paramsByApi[api.id]) : 0)} + ' 个参数'">3 个参数</summary>
+                <table style="margin-top:8px;font-size:13px;">
+                    <thead>
+                    <tr><th>名称</th><th>位置</th><th>必填</th><th>类型</th><th>说明</th><th>示例</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${paramsByApi[api.id] == null or #lists.isEmpty(paramsByApi[api.id])}">
+                        <td colspan="6" class="muted">无参数</td>
+                    </tr>
+                    <tr th:each="p : ${paramsByApi[api.id]}">
+                        <td><b th:text="${p.name}">id</b></td>
+                        <td><span class="badge gray" th:text="${p.location}">path</span></td>
+                        <td th:text="${p.required} ? '是' : '否'">是</td>
+                        <td>
+                            <span th:text="${p.type}">integer</span>
+                            <span th:if="${p.type == 'array' and not #strings.isEmpty(p.itemsType)}"
+                                  style="color:#747d8c;">[<span th:text="${p.itemsType}">string</span>]</span>
+                        </td>
+                        <td class="muted" th:text="${p.description} ?: '-'">订单ID</td>
+                        <td class="muted" th:text="${p.example} ?: '-'">123</td>
+                    </tr>
+                    </tbody>
+                </table>
+                <!-- requestBody / responses 提示（存在时展示可查看） -->
+                <div th:if="${not #strings.isEmpty(api.requestBody)}"
+                     class="muted" style="font-size:12px;margin-top:6px;">
+                    有 requestBody（JSON 结构，见原文页）
+                </div>
+                <div th:if="${not #strings.isEmpty(api.responses)}"
+                     class="muted" style="font-size:12px;">
+                    有 responses（JSON 结构，见原文页）
+                </div>
+            </details>
+        </td>
+        <td th:if="${doc == null}" class="muted" style="font-size:12px;">
+            <a th:href="@{'/admin/apis?docId=' + ${api.docId}}" style="color:#3742fa;"
+               th:text="${docMap[api.docId]?.fileName ?: ('快照#' + api.docId)}">swagger.json</a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</div>
+
+<div class="tip">
+    参数来源：swagger.json 中 operation.parameters 数组，按 path→query→header→cookie 排序。
+    requestBody 和 responses 结构较深，保留 JSON 原文在快照中，需要时到原文页查看。
+</div>
+</main>
+
+</body>
+</html>

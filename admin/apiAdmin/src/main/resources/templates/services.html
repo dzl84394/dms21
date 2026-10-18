@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!-- 微服务管理列表页：可按空间过滤（下拉选中即提交），展示每个服务的版本数 -->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('微服务管理 - apiAdmin', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('services')}"></div>
+
+<main class="content">
+<h1>微服务管理</h1>
+<p class="desc">
+    登记各空间下的微服务，服务编码建议与 Eureka 注册名一致（便于后续自动采集 /v3/api-docs）。
+    <a th:href="@{/admin/services/form(namespaceId=${namespaceId})}" style="color:#3742fa;">+ 新增微服务</a>
+</p>
+
+<div class="tip" th:if="${not #strings.isEmpty(error)}" th:text="${error}">提示</div>
+
+<!-- 过滤：空间下拉，选中即提交 -->
+<form method="get" action="/admin/services" class="toolbar">
+    <select name="namespaceId" onchange="this.form.submit();">
+        <option value="">全部空间</option>
+        <option th:each="n : ${namespaces}" th:value="${n.id}" th:text="${n.name + ' (' + n.code + ')'}"
+                th:selected="${namespaceId != null and namespaceId == n.id}">订单域</option>
+    </select>
+    <noscript><button type="submit">过滤</button></noscript>
+    <a th:href="@{/admin/services}" th:if="${namespaceId != null}" style="color:#3742fa;">清除</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>编码</th>
+        <th>名称</th>
+        <th>所属空间</th>
+        <th>说明</th>
+        <th>版本数</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(items)}">
+        <td colspan="7" class="muted">暂无微服务，点上方"新增微服务"登记第一个。</td>
+    </tr>
+    <tr th:each="s : ${items}">
+        <td><b th:text="${s.code}">service-a</b></td>
+        <td th:text="${s.name}">订单服务</td>
+        <td>
+            <span class="badge gray" th:text="${namespaceById[s.namespaceId]?.name} ?: '未知空间'">订单域</span>
+        </td>
+        <td class="muted" th:text="${#strings.isEmpty(s.description)} ? '-' : ${s.description}">-</td>
+        <td>
+            <span class="badge" th:classappend="${versionCounts[s.id] > 0} ? 'ok' : 'gray'"
+                  th:text="${versionCounts[s.id]} ?: 0">2</span>
+            <a th:if="${versionCounts[s.id] > 0}"
+               th:href="@{/admin/versions(serviceId=${s.id})}" style="font-size:12px;">查看</a>
+        </td>
+        <td class="muted" th:text="${#temporals.format(s.updatedAt, 'yyyy-MM-dd HH:mm')}">2026-10-11 12:00</td>
+        <td>
+            <a th:href="@{/admin/services/form(id=${s.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/services/delete/' + ${s.id}}" style="display:inline;"
+                  onsubmit="return confirm('确定删除该微服务？');">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="tip">
+    规则：服务编码全局唯一；服务下还有版本时不可删除。
+</div>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!-- 导入历史页：全量快照时间倒序，可按微服务过滤，展示 空间/服务/版本/大小/导入人 -->
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('Swagger 导入', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('imports')}"></div>
+
+<main class="content">
+<h1>Swagger 导入</h1>
+<p class="desc">
+    选择 空间/微服务/版本 后把 swagger.json 原文入库（原样保存，不解析不改写）。
+    <a th:href="@{/admin/imports/form}" style="color:#3742fa;">+ 新建导入</a>
+</p>
+
+<!-- 过滤：服务下拉，选中即提交 -->
+<form method="get" action="/admin/imports" class="toolbar">
+    <select name="serviceId" onchange="this.form.submit();">
+        <option value="">全部微服务</option>
+        <option th:each="s : ${services}" th:value="${s.id}" th:text="${s.name + ' (' + s.code + ')'}"
+                th:selected="${serviceId != null and serviceId == s.id}">订单服务</option>
+    </select>
+    <noscript><button type="submit">过滤</button></noscript>
+    <a th:href="@{/admin/imports}" th:if="${serviceId != null}" style="color:#3742fa;">清除</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>导入时间</th>
+        <th>空间</th>
+        <th>微服务</th>
+        <th>版本</th>
+        <th>文件名</th>
+        <th>大小</th>
+        <th>导入人</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(items)}">
+        <td colspan="8" class="muted">还没有导入记录，点上方"新建导入"上传第一份 swagger.json。</td>
+    </tr>
+    <tr th:each="d : ${items}">
+        <td th:text="${#temporals.format(d.importedAt, 'MM-dd HH:mm:ss')}">10-11 15:30:00</td>
+        <td>
+            <span class="badge gray"
+                  th:text="${namespaceById[serviceById[versionById[d.versionId]?.serviceId]?.namespaceId]?.name} ?: '-'">订单域</span>
+        </td>
+        <td><b th:text="${serviceById[versionById[d.versionId]?.serviceId]?.code} ?: '-'">service-a</b></td>
+        <td>
+            <span class="badge" th:classappend="${versionById[d.versionId]?.current} ? 'ok' : 'gray'"
+                  th:text="${versionById[d.versionId]?.version} ?: '-'">v1.0.0</span>
+        </td>
+        <td th:text="${#strings.isEmpty(d.fileName)} ? '-' : ${d.fileName}">swagger.json</td>
+        <td><span th:text="${d.sizeKb()}">12</span> KB</td>
+        <td th:text="${#strings.isEmpty(d.importedBy)} ? '-' : ${d.importedBy}">zhangsan</td>
+        <td><a th:href="@{'/admin/imports/docs/' + ${d.id}}" style="color:#3742fa;">查看原文</a></td>
+    </tr>
+    </tbody>
+</table>
+
+<div class="tip">
+    规则：当前版本可保存多份快照（每次导入追加一条）；归档版本自动去重只留最新一份。
+</div>
+</main>
+
+</body>
+</html>
