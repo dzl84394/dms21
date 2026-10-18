@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('微服务', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('service')}"></div>
+
+<main class="content">
+<h1>微服务</h1>
+<p class="desc">
+    流程：Eureka 上的服务<b>自动同步入库</b>（标记"待确认"）→ 人工编辑<b>中文说明</b>、选子系统、补三类负责人 →
+    点<b>确认固定</b>，即成为固定微服务（之后同步永不覆盖）。子系统在 CMDB 子系统页维护。
+</p>
+
+<!-- 搜索 + 过滤：GET 表单，条件改变后回车/点搜索即生效 -->
+<form method="get" action="/admin/service" class="toolbar">
+    <input type="text" name="q" th:value="${q}" placeholder="搜服务名 / 中文说明" style="width:200px;">
+    <select name="subsystemId">
+        <option value="">全部子系统</option>
+        <option value="0" th:selected="${subsystemId != null and subsystemId == 0}">未挂子系统</option>
+        <!-- 选项来自 t_subsystem（显示编号·中文全称）；库里值不在清单时仍显示原值 -->
+        <option th:each="s : ${subsystems}" th:value="${s.id}"
+                th:text="${s.code + (s.shortName != null and !s.shortName.isEmpty() ? '·' + s.shortName : (s.fullName != null ? '·' + s.fullName : ''))}"
+                th:selected="${subsystemId != null and subsystemId == s.id}">S001·交易平台</option>
+    </select>
+    <select name="status">
+        <option value="">全部状态</option>
+        <option value="pending" th:selected="${status == 'pending'}">待确认</option>
+        <option value="confirmed" th:selected="${status == 'confirmed'}">已固定</option>
+    </select>
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/service}" th:if="${q != '' or subsystemId != null or status != ''}"
+       style="color:#3742fa;">清除条件</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>服务名</th>
+        <th>中文说明</th>
+        <th>子系统</th>
+        <th>技术负责人</th>
+        <th>业务负责人</th>
+        <th>运维负责人</th>
+        <th>状态</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <!-- result 由 ServiceGroupService.search() 返回：items/total/page/totalPages -->
+    <tr th:if="${#lists.isEmpty(result['items'])}">
+        <td colspan="9" class="muted">没有匹配的记录（条件太严 / 服务还没注册上来）</td>
+    </tr>
+    <!-- 待确认的行浅黄底置顶（search 排序保证） -->
+    <tr th:each="g : ${result['items']}" th:classappend="${g.isConfirmed()} ? '' : 'pending-row'">
+        <td th:text="${g.serviceName}">service-a</td>
+        <td>
+            <input type="text" name="serviceNameCn" th:value="${g.serviceNameCn}"
+                   placeholder="如：服务A-订单中心" style="width:180px;"
+                   th:attr="form=${'editForm-' + g.id}">
+        </td>
+        <td>
+            <!-- 子系统下拉：选项来自 t_subsystem（显示编号·中文全称）；库里值不在清单时兜底显示原值 -->
+            <select name="subsystemId" th:attr="form=${'editForm-' + g.id}">
+                <option value="" th:selected="${g.subsystemId == null}">未挂子系统</option>
+                <option th:each="s : ${subsystems}" th:value="${s.id}"
+                        th:text="${s.code + (s.shortName != null and !s.shortName.isEmpty() ? '·' + s.shortName : (s.fullName != null ? '·' + s.fullName : ''))}"
+                        th:selected="${g.subsystemId != null and g.subsystemId == s.id}">S001·交易平台</option>
+                <!-- 兜底：库里存的子系统 id 已被删除时才显示，保证原值可见 -->
+                <option th:if="${g.subsystemId != null and !subsystems.![id].contains(g.subsystemId)}"
+                        th:value="${g.subsystemId}" th:text="${subsystemNames[g.subsystemId]}"
+                        th:selected="true">子系统已删除#1</option>
+            </select>
+        </td>
+        <td>
+            <input type="text" name="techOwner" th:value="${g.techOwner}" placeholder="技术负责人"
+                   style="width:80px;" th:attr="form=${'editForm-' + g.id}">
+        </td>
+        <td>
+            <input type="text" name="bizOwner" th:value="${g.bizOwner}" placeholder="业务负责人"
+                   style="width:80px;" th:attr="form=${'editForm-' + g.id}">
+        </td>
+        <td>
+            <input type="text" name="opsOwner" th:value="${g.opsOwner}" placeholder="运维负责人"
+                   style="width:80px;" th:attr="form=${'editForm-' + g.id}">
+        </td>
+        <td>
+            <span class="badge" th:classappend="${g.isConfirmed()} ? 'ok' : 'warn'"
+                  th:text="${g.isConfirmed()} ? '已固定' : '待确认'">待确认</span>
+        </td>
+        <td class="muted" th:text="${g.updatedAt != null} ? ${#temporals.format(g.updatedAt, 'MM-dd HH:mm')} : '-'">09-15 10:00</td>
+        <td class="inline-form">
+            <input type="hidden" name="id" th:value="${g.id}" th:attr="form=${'editForm-' + g.id}">
+            <input type="hidden" name="serviceName" th:value="${g.serviceName}" th:attr="form=${'editForm-' + g.id}">
+            <button type="submit" th:attr="form=${'editForm-' + g.id}">保存</button>
+            <!-- 确认固定：保存当前编辑 + 标记为固定微服务（confirm=true 走查询参数） -->
+            <button type="submit" th:attr="form=${'editForm-' + g.id}"
+                    th:formaction="@{/admin/service/save(confirm=true)}"
+                    th:disabled="${g.isConfirmed()}">确认固定</button>
+            <button type="submit" class="del" th:attr="form=${'editForm-' + g.id}"
+                    th:formaction="@{'/admin/service/delete/' + ${g.id}}">删除</button>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<!-- 每条记录对应的编辑 form（提交载体，表格里的控件用 form 属性关联） -->
+<form th:each="g : ${result['items']}" method="post" th:action="@{/admin/service/save}"
+      th:id="${'editForm-' + g.id}"></form>
+
+<!-- 分页：保持 q/subsystemId/status 条件翻页 -->
+<div class="pager" th:if="${result['total'] > 0}">
+    <a th:if="${result['page'] > 1}"
+       th:href="@{/admin/service(page=${result['page'] - 1}, q=${q}, subsystemId=${subsystemId}, status=${status})}">← 上一页</a>
+    <span class="info">第 <b th:text="${result['page']}">1</b> / <b th:text="${result['totalPages']}">1</b> 页
+        · 共 <b th:text="${result['total']}">0</b> 条（每页 20 条）</span>
+    <a th:if="${result['page'] < result['totalPages']}"
+       th:href="@{/admin/service(page=${result['page'] + 1}, q=${q}, subsystemId=${subsystemId}, status=${status})}">下一页 →</a>
+</div>
+</main>
+
+</body>
+</html>

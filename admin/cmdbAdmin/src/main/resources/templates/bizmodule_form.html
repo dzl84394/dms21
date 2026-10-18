@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('业务模块表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('module')}"></div>
+
+<main class="content">
+<h1 th:text="${module != null} ? '编辑业务模块 #' + ${module.id} : '添加业务模块'">添加业务模块</h1>
+<p class="desc">
+    模块挂在「公司 → 业务领域 → 子系统」下：逐级选择会自动过滤下一级选项；
+    选定子系统后，所属公司与业务领域自动回填（保存时以子系统自身归属为准）。名称在子系统内唯一。
+</p>
+
+<div class="card">
+    <form method="post" action="/admin/module/save">
+        <input type="hidden" name="id" th:if="${module != null}" th:value="${module.id}">
+
+        <table style="max-width:600px;">
+            <tbody>
+            <tr>
+                <td style="width:110px;">所属公司 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <select id="companySel" style="font-size:13px;padding:5px 8px;width:280px;">
+                        <option value="" th:selected="${module == null}">请选择公司</option>
+                        <option th:each="c : ${companies}" th:value="${c.id}"
+                                th:text="${c.code + ' / ' + ((c.shortName != null and !c.shortName.isEmpty()) ? c.shortName : c.fullName)}"
+                                th:selected="${module != null and module.companyId == c.id}">C001 / 某某科技</option>
+                    </select>
+                    <span class="muted">选子系统后自动回填，仅用于过滤</span>
+                </td>
+            </tr>
+            <tr>
+                <td>所属业务领域 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <select id="domainSel" style="font-size:13px;padding:5px 8px;width:280px;">
+                        <option value="" th:selected="${module == null}">请选择业务领域</option>
+                        <option th:each="d : ${bizDomains}" th:value="${d.id}" th:attr="data-company=${d.companyId}"
+                                th:text="${d.code + ' / ' + ((d.shortName != null and !d.shortName.isEmpty()) ? d.shortName : d.fullName)}"
+                                th:selected="${module != null and module.bizDomainId == d.id}">D001 / 交易</option>
+                    </select>
+                    <span class="muted">随公司联动</span>
+                </td>
+            </tr>
+            <tr>
+                <td>所属子系统 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <select name="subsystemId" id="subsystemSel" required style="font-size:13px;padding:5px 8px;width:280px;">
+                        <option value="" th:selected="${module == null}">请选择子系统</option>
+                        <option th:each="s : ${subsystems}" th:value="${s.id}"
+                                th:attr="data-company=${s.companyId},data-domain=${s.bizDomainId}"
+                                th:text="${s.code + ' / ' + ((s.shortName != null and !s.shortName.isEmpty()) ? s.shortName : s.fullName)}"
+                                th:selected="${module != null and module.subsystemId == s.id}">S001 / 交易</option>
+                    </select>
+                    <span class="muted" th:if="${#lists.isEmpty(subsystems)}">暂无子系统，请先到"子系统"页添加</span>
+                </td>
+            </tr>
+            <tr>
+                <td>名称 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="name" required
+                           th:value="${module?.name}" placeholder="如 订单中心" style="width:100%;">
+                    <span class="muted">子系统内唯一</span>
+                </td>
+            </tr>
+            <tr>
+                <td>英文名称</td>
+                <td>
+                    <input type="text" name="englishName"
+                           th:value="${module?.englishName}" placeholder="如 Order Center" style="width:100%;">
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:14px;">
+            <button type="submit" th:text="${module != null} ? '保存修改' : '提交新增'">提交新增</button>
+            <a th:href="@{/admin/module}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+</main>
+
+<!-- 三级级联：公司 → 业务领域 → 子系统 逐级过滤；选子系统反向回填公司/领域 -->
+<script>
+(function () {
+    var companySel = document.getElementById('companySel');
+    var domainSel = document.getElementById('domainSel');
+    var subsystemSel = document.getElementById('subsystemSel');
+
+    // 按上级选中值显示/隐藏下拉项（占位项 value 为空始终保留）
+    function filterOptions(sel, dataKey, parentValue) {
+        var options = sel.options;
+        for (var i = 0; i < options.length; i++) {
+            var o = options[i];
+            if (!o.value) { continue; }
+            var show = (!parentValue || o.getAttribute(dataKey) === parentValue);
+            o.hidden = !show;
+            o.disabled = !show;
+        }
+        // 当前选中项被过滤掉时清空，避免提交隐藏值
+        var sel0 = sel.selectedOptions[0];
+        if (sel0 && sel0.hidden) { sel.value = ''; }
+    }
+
+    function refresh() {
+        filterOptions(domainSel, 'data-company', companySel.value);
+        filterOptions(subsystemSel, 'data-domain', domainSel.value);
+    }
+
+    // 选子系统：反向把所属公司与业务领域默认选上
+    function backfill() {
+        var o = subsystemSel.selectedOptions[0];
+        if (o && o.value) {
+            companySel.value = o.getAttribute('data-company');
+            domainSel.value = o.getAttribute('data-domain');
+            refresh(); // 回填后重新过滤，保持三级一致
+        }
+    }
+
+    companySel.addEventListener('change', refresh);
+    domainSel.addEventListener('change', refresh);
+    subsystemSel.addEventListener('change', backfill);
+    refresh(); // 编辑模式初始按已选公司/领域过滤一遍
+})();
+</script>
+
+</body>
+</html>

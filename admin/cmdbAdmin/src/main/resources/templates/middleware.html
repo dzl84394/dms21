@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('中间件', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('middleware')}"></div>
+
+<main class="content">
+<h1>中间件</h1>
+<p class="desc">
+    中间件与微服务同表存储（t_service_group），靠大类字段区分页面归属：本页只展示大类≠业务服务的记录。
+    中间件不来自 Eureka，纯人工录入；大类必填，决定它在中间件页的分组展示；保存后可用"扩展"录入专有属性。
+</p>
+
+<!-- 搜索 + 过滤 + 新增入口 -->
+<form method="get" action="/admin/middleware" class="toolbar">
+    <input type="text" name="q" th:value="${q}" placeholder="搜名称 / 中文说明" style="width:200px;">
+    <select name="category">
+        <option value="">全部大类</option>
+        <option th:each="cat : ${categories.keySet()}" th:value="${cat}" th:text="${cat}"
+                th:selected="${category == cat}">数据库</option>
+    </select>
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/middleware}" th:if="${q != '' or category != ''}"
+       style="color:#3742fa;">清除条件</a>
+    <a th:href="@{/admin/middleware/form}" style="margin-left:auto;">新增中间件</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>名称</th>
+        <th>中文说明</th>
+        <th>大类</th>
+        <th>小类</th>
+        <th>子系统</th>
+        <th>技术负责人</th>
+        <th>业务负责人</th>
+        <th>运维负责人</th>
+        <th>扩展信息</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(result['items'])}">
+        <td colspan="11" class="muted">没有匹配的中间件记录</td>
+    </tr>
+    <tr th:each="g : ${result['items']}">
+        <td th:text="${g.serviceName}">mysql-prod</td>
+        <td th:text="${g.serviceNameCn}">生产MySQL集群</td>
+        <td th:text="${g.category}">数据库</td>
+        <td th:text="${g.subCategory}">MySQL</td>
+        <td th:text="${g.subsystemId != null} ? ${subsystemNames[g.subsystemId]} : '-'">交易平台</td>
+        <td th:text="${g.techOwner}">张三</td>
+        <td th:text="${g.bizOwner}">李四</td>
+        <td th:text="${g.opsOwner}">王五</td>
+        <td th:text="${g.extSummary}">主机地址=10.0.0.1, 端口=3306</td>
+        <td class="muted" th:text="${g.updatedAt != null} ? ${#temporals.format(g.updatedAt, 'MM-dd HH:mm')} : '-'">09-15 10:00</td>
+        <td>
+            <a th:href="@{'/admin/middleware/form?id=' + ${g.id}}">编辑</a>
+            <a th:href="@{'/admin/middleware/ext/' + ${g.id}}" style="margin-left:8px;">扩展</a>
+            <form method="post" th:action="@{'/admin/middleware/delete/' + ${g.id}}" style="display:inline;margin-left:8px;">
+                <button type="submit" class="del" style="padding:2px 8px;font-size:12px;">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>

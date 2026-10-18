@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('子系统表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('subsystem')}"></div>
+
+<main class="content">
+<h1 th:text="${subsystem != null} ? '编辑子系统 #' + ${subsystem.id} : '添加子系统'">添加子系统</h1>
+<p class="desc">
+    子系统挂在「公司 → 业务领域」下：先选公司，业务领域下拉会按公司联动过滤；编号在业务领域内唯一。
+</p>
+
+<div class="card">
+    <form method="post" action="/admin/subsystem/save">
+        <input type="hidden" name="id" th:if="${subsystem != null}" th:value="${subsystem.id}">
+
+        <table style="max-width:600px;">
+            <tbody>
+            <tr>
+                <td style="width:110px;">所属公司 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <select name="companyId" id="companySel" required style="font-size:13px;padding:5px 8px;width:280px;">
+                        <option value="" th:selected="${subsystem == null}">请选择公司</option>
+                        <option th:each="c : ${companies}" th:value="${c.id}"
+                                th:text="${c.code + ' / ' + ((c.shortName != null and !c.shortName.isEmpty()) ? c.shortName : c.fullName)}"
+                                th:selected="${subsystem != null and subsystem.companyId == c.id}">C001 / 某某科技</option>
+                    </select>
+                    <span class="muted" th:if="${#lists.isEmpty(companies)}">暂无公司，请先到"公司"页添加</span>
+                </td>
+            </tr>
+            <tr>
+                <td>所属业务领域 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <select name="bizDomainId" id="domainSel" required style="font-size:13px;padding:5px 8px;width:280px;">
+                        <option value="" th:selected="${subsystem == null}">请选择业务领域</option>
+                        <option th:each="d : ${bizDomains}" th:value="${d.id}" th:attr="data-company=${d.companyId}"
+                                th:text="${d.code + ' / ' + ((d.shortName != null and !d.shortName.isEmpty()) ? d.shortName : d.fullName)}"
+                                th:selected="${subsystem != null and subsystem.bizDomainId == d.id}">D001 / 交易</option>
+                    </select>
+                    <span class="muted">选项随公司联动</span>
+                </td>
+            </tr>
+            <tr>
+                <td>编号 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="code" required
+                           th:value="${subsystem?.code}" placeholder="如 S001" style="width:180px;">
+                    <span class="muted">业务领域内唯一</span>
+                </td>
+            </tr>
+            <tr>
+                <td>中文全称 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="fullName" required
+                           th:value="${subsystem?.fullName}" placeholder="如 交易平台" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>中文简称</td>
+                <td>
+                    <input type="text" name="shortName"
+                           th:value="${subsystem?.shortName}" placeholder="如 交易" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>英文名称</td>
+                <td>
+                    <input type="text" name="englishName"
+                           th:value="${subsystem?.englishName}" placeholder="如 Trading Platform" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>状态 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <select name="status" required style="font-size:13px;padding:5px 8px;width:140px;">
+                        <option th:each="o : ${statusOptions}" th:value="${o}" th:text="${o}"
+                                th:selected="${subsystem != null and subsystem.status == o}">在运</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>类别 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <select name="category" required style="font-size:13px;padding:5px 8px;width:140px;">
+                        <option th:each="o : ${categoryOptions}" th:value="${o}" th:text="${o}"
+                                th:selected="${subsystem != null and subsystem.category == o}">业务</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>等级 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <select name="level" required style="font-size:13px;padding:5px 8px;width:140px;">
+                        <option th:each="o : ${levelOptions}" th:value="${o}" th:text="${o}"
+                                th:selected="${subsystem != null and subsystem.level == o}">核心</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>是否外购</td>
+                <td>
+                    <select name="outsourced" style="font-size:13px;padding:5px 8px;width:140px;">
+                        <option value="false" th:selected="${subsystem == null or !subsystem.outsourced}">否（自研）</option>
+                        <option value="true" th:selected="${subsystem != null and subsystem.outsourced}">是（外购）</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>供应商</td>
+                <td>
+                    <input type="text" name="vendor"
+                           th:value="${subsystem?.vendor}" placeholder="外购时填写，如 某某软件股份" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>开发团队</td>
+                <td>
+                    <input type="text" name="devTeam"
+                           th:value="${subsystem?.devTeam}" placeholder="如 交易研发组" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>运维团队</td>
+                <td>
+                    <input type="text" name="opsTeam"
+                           th:value="${subsystem?.opsTeam}" placeholder="如 平台运维组" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>业务属主</td>
+                <td>
+                    <input type="text" name="bizOwner"
+                           th:value="${subsystem?.bizOwner}" placeholder="业务侧第一责任人，如 王五" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>子系统介绍</td>
+                <td>
+                    <textarea name="description" rows="3" style="width:100%;"
+                              th:text="${subsystem?.description}" placeholder="定位/边界/能力概述"></textarea>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:14px;">
+            <button type="submit" th:text="${subsystem != null} ? '保存修改' : '提交新增'">提交新增</button>
+            <a th:href="@{/admin/subsystem}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+</main>
+
+<!-- 公司 → 业务领域 级联：按所选公司过滤领域选项（服务端保存时仍会校验归属） -->
+<script>
+(function () {
+    var companySel = document.getElementById('companySel');
+    var domainSel = document.getElementById('domainSel');
+    function refreshDomains() {
+        var cid = companySel.value;
+        var options = domainSel.options;
+        for (var i = 0; i < options.length; i++) {
+            var o = options[i];
+            if (!o.value) { continue; } // 占位项始终保留
+            var show = (!cid || o.getAttribute('data-company') === cid);
+            o.hidden = !show;
+            o.disabled = !show;
+        }
+        // 当前选中的领域被过滤掉时清空，避免提交隐藏值
+        var sel = domainSel.selectedOptions[0];
+        if (sel && sel.hidden) { domainSel.value = ''; }
+    }
+    companySel.addEventListener('change', refreshDomains);
+    refreshDomains(); // 编辑模式初始也按公司过滤一遍
+})();
+</script>
+
+</body>
+</html>

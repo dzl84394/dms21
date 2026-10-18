@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('公司表单', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('company')}"></div>
+
+<main class="content">
+<h1 th:text="${company != null} ? '编辑公司 #' + ${company.id} : '添加公司'">添加公司</h1>
+<p class="desc">
+    公司是 CMDB 顶层配置项，业务领域等下级配置项按公司隔离。编号全局唯一。
+</p>
+
+<div class="card">
+    <form method="post" action="/admin/company/save">
+        <input type="hidden" name="id" th:if="${company != null}" th:value="${company.id}">
+
+        <table style="max-width:560px;">
+            <tbody>
+            <tr>
+                <td style="width:110px;">编号 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="code" required
+                           th:value="${company?.code}" placeholder="如 C001" style="width:180px;">
+                    <span class="muted">全局唯一，保存后作为公司逻辑标识</span>
+                </td>
+            </tr>
+            <tr>
+                <td>中文全称 <span style="color:#ff6b81;">*</span></td>
+                <td>
+                    <input type="text" name="fullName" required
+                           th:value="${company?.fullName}" placeholder="如 某某科技股份有限公司" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>简称</td>
+                <td>
+                    <input type="text" name="shortName"
+                           th:value="${company?.shortName}" placeholder="如 某某科技" style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>英文名称</td>
+                <td>
+                    <input type="text" name="englishName"
+                           th:value="${company?.englishName}" placeholder="如 Demo Technology Co., Ltd." style="width:100%;">
+                </td>
+            </tr>
+            <tr>
+                <td>主业域名</td>
+                <td>
+                    <input type="text" name="domain"
+                           th:value="${company?.domain}" placeholder="如 demotech.com" style="width:100%;">
+                    <span class="muted">主站/主营业务域名，多个可逗号分隔</span>
+                </td>
+            </tr>
+            <tr>
+                <td>介绍说明</td>
+                <td>
+                    <textarea name="description" rows="3" style="width:100%;"
+                              th:text="${company?.description}" placeholder="公司定位/主营业务概述"></textarea>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:14px;">
+            <button type="submit" th:text="${company != null} ? '保存修改' : '提交新增'">提交新增</button>
+            <a th:href="@{/admin/company}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+</main>
+
+</body>
+</html>

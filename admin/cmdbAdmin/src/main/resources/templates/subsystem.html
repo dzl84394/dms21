@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('子系统管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('subsystem')}"></div>
+
+<main class="content">
+<h1>子系统</h1>
+<p class="desc">
+    业务领域下的系统单元，按公司/业务领域两级隔离。支持按公司过滤 + 关键词（编号/全称/简称/英文名）过滤。
+    <a th:href="@{/admin/subsystem/form}" style="color:#3742fa;">+ 添加子系统</a>
+</p>
+
+<!-- 过滤：GET 表单，按公司下拉 + 关键词，条件改变后回车/点搜索即生效 -->
+<form method="get" action="/admin/subsystem" class="toolbar">
+    <select name="companyId" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部公司</option>
+        <option th:each="c : ${companies}" th:value="${c.id}" th:text="${(c.shortName != null and !c.shortName.isEmpty()) ? c.shortName : c.fullName}"
+                th:selected="${companyId != null and companyId == c.id}">某某科技</option>
+    </select>
+    <input type="text" name="keyword" th:value="${keyword}" placeholder="编号/全称/简称/英文名" style="width:220px;">
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/subsystem}" th:if="${companyId != null or keyword != ''}" style="color:#3742fa;">清除条件</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>编号</th>
+        <th>所属公司</th>
+        <th>所属业务领域</th>
+        <th>中文全称</th>
+        <th>类别</th>
+        <th>状态</th>
+        <th>等级</th>
+        <th>外购</th>
+        <th>供应商</th>
+        <th>开发团队</th>
+        <th>运维团队</th>
+        <th>业务属主</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(items)}">
+        <td colspan="14" class="muted">暂无子系统，点上方"添加子系统"录入第一条（需先有公司与业务领域）。</td>
+    </tr>
+    <tr th:each="e : ${items}">
+        <td><b th:text="${e.code}">S001</b></td>
+        <td th:text="${companyNames[e.companyId]}">某某科技</td>
+        <td th:text="${domainNames[e.bizDomainId]}">交易</td>
+        <td th:text="${e.fullName}">交易平台</td>
+        <td th:text="${e.category}">业务</td>
+        <td>
+            <span class="badge" th:text="${e.status}"
+                  th:classappend="${e.status == '在运'} ? 'ok' : (${e.status == '在建'} ? 'warn' : (${e.status == '下线'} ? 'bad' : 'gray'))">在运</span>
+        </td>
+        <td>
+            <span class="badge" th:text="${e.level}"
+                  th:classappend="${e.level == '核心'} ? 'bad' : (${e.level == '重要'} ? 'warn' : 'gray')">核心</span>
+        </td>
+        <td th:text="${e.outsourced} ? '是' : '否'">否</td>
+        <td th:text="${e.vendor != null and !e.vendor.isEmpty()} ? ${e.vendor} : '-'">-</td>
+        <td th:text="${e.devTeam != null and !e.devTeam.isEmpty()} ? ${e.devTeam} : '-'">-</td>
+        <td th:text="${e.opsTeam != null and !e.opsTeam.isEmpty()} ? ${e.opsTeam} : '-'">-</td>
+        <td th:text="${e.bizOwner != null and !e.bizOwner.isEmpty()} ? ${e.bizOwner} : '-'">-</td>
+        <td class="muted" th:text="${#temporals.format(e.updatedAt, 'MM-dd HH:mm')}">10-17 12:00</td>
+        <td class="inline-form">
+            <a th:href="@{/admin/subsystem/form(id=${e.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/subsystem/delete/' + ${e.id}}" style="display:inline;">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>

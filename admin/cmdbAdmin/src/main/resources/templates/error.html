@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('操作失败', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('__none__')}"></div>
+<main class="content">
+    <h1>操作失败</h1>
+    <div class="card">
+        <h2 style="color:#ff4757;" th:text="${message}">校验未通过</h2>
+        <p class="muted">请修正后重试；浏览器后退或点下方链接返回列表页。</p>
+        <div class="tip">
+            常见原因：编号重复（公司全局唯一 / 业务领域公司内唯一）、
+            公司下仍有业务领域（先删除或迁移业务领域再删公司）、必填字段为空。
+        </div>
+    </div>
+    <p style="margin-top:14px;">
+        <a th:href="@{/admin/company}" style="color:#3742fa;">← 公司列表</a>
+        &nbsp;&nbsp;
+        <a th:href="@{/admin/bizdomain}" style="color:#3742fa;">← 业务领域列表</a>
+    </p>
+</main>
+</body>
+</html>

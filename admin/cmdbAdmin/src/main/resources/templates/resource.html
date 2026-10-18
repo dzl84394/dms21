@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('资源管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('resource')}"></div>
+
+<main class="content">
+<h1>资源</h1>
+<p class="desc">
+    子系统各环境下的资源清单（物理机 / 云主机 / 容器），首期只记 名称 + 类型 + 备注，具体资源属性后续细化。
+    <a th:href="@{/admin/resource/form}" style="color:#3742fa;">+ 添加资源</a>
+</p>
+
+<!-- 过滤：GET 表单，子系统级联 + 环境（随子系统过滤）+ 类型 + 关键词 -->
+<form method="get" action="/admin/resource" class="toolbar">
+    <select id="companySel" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部公司</option>
+        <option th:each="c : ${companies}" th:value="${c.id}"
+                th:text="${(c.shortName != null and !c.shortName.isEmpty()) ? c.shortName : c.fullName}">某某科技</option>
+    </select>
+    <select id="domainSel" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部业务领域</option>
+        <option th:each="d : ${bizDomains}" th:value="${d.id}" th:attr="data-company=${d.companyId}"
+                th:text="${(d.shortName != null and !d.shortName.isEmpty()) ? d.shortName : d.fullName}">交易</option>
+    </select>
+    <select name="subsystemId" id="subsystemSel" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部子系统</option>
+        <option th:each="s : ${subsystems}" th:value="${s.id}"
+                th:attr="data-company=${s.companyId},data-domain=${s.bizDomainId}"
+                th:text="${s.code + ' / ' + ((s.shortName != null and !s.shortName.isEmpty()) ? s.shortName : s.fullName)}"
+                th:selected="${subsystemId != null and subsystemId == s.id}">S001 / 交易</option>
+    </select>
+    <select name="envId" id="envSel" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部环境</option>
+        <option th:each="e : ${envs}" th:value="${e.id}" th:attr="data-subsystem=${e.subsystemId}"
+                th:text="${e.name}"
+                th:selected="${envId != null and envId == e.id}">DEV</option>
+    </select>
+    <select name="resType" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部类型</option>
+        <option th:each="t : ${typeOptions}" th:value="${t}" th:text="${t}"
+                th:selected="${resType == t}">云主机</option>
+    </select>
+    <input type="text" name="keyword" th:value="${keyword}" placeholder="名称/备注" style="width:180px;">
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/resource}" th:if="${subsystemId != null or envId != null or resType != '' or keyword != ''}" style="color:#3742fa;">清除条件</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>名称</th>
+        <th>类型</th>
+        <th>所属公司</th>
+        <th>所属业务领域</th>
+        <th>所属子系统</th>
+        <th>所属环境</th>
+        <th>备注</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(items)}">
+        <td colspan="9" class="muted">暂无资源，点上方"添加资源"录入第一条（需先有子系统和环境）。</td>
+    </tr>
+    <tr th:each="e : ${items}">
+        <td><b th:text="${e.name}">10.0.1.15</b></td>
+        <td th:text="${e.resType}">云主机</td>
+        <td th:text="${companyNames[e.companyId]}">某某科技</td>
+        <td th:text="${domainNames[e.bizDomainId]}">交易</td>
+        <td th:text="${subsystemNames[e.subsystemId]}">交易平台</td>
+        <td><b th:text="${envNames[e.envId]}">PROD</b></td>
+        <td class="muted" th:text="${e.remark != null and !e.remark.isEmpty()} ? ${e.remark} : '-'">应用节点</td>
+        <td class="muted" th:text="${#temporals.format(e.updatedAt, 'MM-dd HH:mm')}">10-17 12:00</td>
+        <td class="inline-form">
+            <a th:href="@{/admin/resource/form(id=${e.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/resource/delete/' + ${e.id}}" style="display:inline;">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+<!-- 级联过滤：公司 → 业务领域 → 子系统 → 环境；选子系统反向回填公司/领域 -->
+<script>
+(function () {
+    var companySel = document.getElementById('companySel');
+    var domainSel = document.getElementById('domainSel');
+    var subsystemSel = document.getElementById('subsystemSel');
+    var envSel = document.getElementById('envSel');
+
+    function filterOptions(sel, dataKey, parentValue) {
+        var options = sel.options;
+        for (var i = 0; i < options.length; i++) {
+            var o = options[i];
+            if (!o.value) { continue; }
+            var show = (!parentValue || o.getAttribute(dataKey) === parentValue);
+            o.hidden = !show;
+            o.disabled = !show;
+        }
+        var sel0 = sel.selectedOptions[0];
+        if (sel0 && sel0.hidden) { sel.value = ''; }
+    }
+
+    function refresh() {
+        filterOptions(domainSel, 'data-company', companySel.value);
+        filterOptions(subsystemSel, 'data-domain', domainSel.value);
+        filterOptions(envSel, 'data-subsystem', subsystemSel.value);
+    }
+
+    function backfill() {
+        var o = subsystemSel.selectedOptions[0];
+        if (o && o.value) {
+            companySel.value = o.getAttribute('data-company');
+            domainSel.value = o.getAttribute('data-domain');
+            refresh();
+        }
+    }
+
+    companySel.addEventListener('change', refresh);
+    domainSel.addEventListener('change', refresh);
+    subsystemSel.addEventListener('change', backfill);
+    backfill();
+    refresh(); // 初始（带过滤条件进入时）按已选值过滤一遍
+})();
+</script>
+
+</body>
+</html>

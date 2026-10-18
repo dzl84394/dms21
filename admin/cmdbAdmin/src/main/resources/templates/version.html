@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('版本管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('version')}"></div>
+
+<main class="content">
+<h1>版本</h1>
+<p class="desc">
+    每个子系统的版本清单（版本编号 + git 代码库版本），子系统内新版本排前。支持按子系统过滤 + 关键词（编号/git版本/说明）过滤。
+    <a th:href="@{/admin/version/form(subsystemId=${subsystemId})}" style="color:#3742fa;">+ 添加版本</a>
+</p>
+
+<!-- 过滤：GET 表单，子系统级联 + 关键词 -->
+<form method="get" action="/admin/version" class="toolbar">
+    <select id="companySel" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部公司</option>
+        <option th:each="c : ${companies}" th:value="${c.id}"
+                th:text="${(c.shortName != null and !c.shortName.isEmpty()) ? c.shortName : c.fullName}">某某科技</option>
+    </select>
+    <select id="domainSel" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部业务领域</option>
+        <option th:each="d : ${bizDomains}" th:value="${d.id}" th:attr="data-company=${d.companyId}"
+                th:text="${(d.shortName != null and !d.shortName.isEmpty()) ? d.shortName : d.fullName}">交易</option>
+    </select>
+    <select name="subsystemId" id="subsystemSel" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部子系统</option>
+        <option th:each="s : ${subsystems}" th:value="${s.id}"
+                th:attr="data-company=${s.companyId},data-domain=${s.bizDomainId}"
+                th:text="${s.code + ' / ' + ((s.shortName != null and !s.shortName.isEmpty()) ? s.shortName : s.fullName)}"
+                th:selected="${subsystemId != null and subsystemId == s.id}">S001 / 交易</option>
+    </select>
+    <input type="text" name="keyword" th:value="${keyword}" placeholder="编号/git版本/说明" style="width:200px;">
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/version}" th:if="${subsystemId != null or keyword != ''}" style="color:#3742fa;">清除条件</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>版本编号</th>
+        <th>git代码库版本</th>
+        <th>所属公司</th>
+        <th>所属业务领域</th>
+        <th>所属子系统</th>
+        <th>版本说明</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(items)}">
+        <td colspan="8" class="muted">暂无版本，点上方"添加版本"录入第一条（需先有子系统）。</td>
+    </tr>
+    <tr th:each="e : ${items}">
+        <td><b th:text="${e.code}">V1.0.0</b></td>
+        <td th:text="${e.gitVersion}">a1b2c3d</td>
+        <td th:text="${companyNames[e.companyId]}">某某科技</td>
+        <td th:text="${domainNames[e.bizDomainId]}">交易</td>
+        <td th:text="${subsystemNames[e.subsystemId]}">交易平台</td>
+        <td class="muted" th:text="${e.description != null and !e.description.isEmpty()} ? ${e.description} : '-'">首个正式版本</td>
+        <td class="muted" th:text="${#temporals.format(e.updatedAt, 'MM-dd HH:mm')}">10-18 12:00</td>
+        <td class="inline-form">
+            <a th:href="@{/admin/version/form(id=${e.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/version/delete/' + ${e.id}}" style="display:inline;">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+<script>
+(function () {
+    var companySel = document.getElementById('companySel');
+    var domainSel = document.getElementById('domainSel');
+    var subsystemSel = document.getElementById('subsystemSel');
+
+    function filterOptions(sel, dataKey, parentValue) {
+        var options = sel.options;
+        for (var i = 0; i < options.length; i++) {
+            var o = options[i];
+            if (!o.value) { continue; }
+            var show = (!parentValue || o.getAttribute(dataKey) === parentValue);
+            o.hidden = !show;
+            o.disabled = !show;
+        }
+        var sel0 = sel.selectedOptions[0];
+        if (sel0 && sel0.hidden) { sel.value = ''; }
+    }
+
+    function backfill() {
+        var o = subsystemSel.selectedOptions[0];
+        if (o && o.value) {
+            companySel.value = o.getAttribute('data-company');
+            domainSel.value = o.getAttribute('data-domain');
+            filterOptions(domainSel, 'data-company', companySel.value);
+            filterOptions(subsystemSel, 'data-domain', domainSel.value);
+        }
+    }
+
+    companySel.addEventListener('change', function () {
+        filterOptions(domainSel, 'data-company', companySel.value);
+        filterOptions(subsystemSel, 'data-domain', domainSel.value);
+    });
+    domainSel.addEventListener('change', function () {
+        filterOptions(subsystemSel, 'data-domain', domainSel.value);
+    });
+    backfill();
+})();
+</script>
+
+</body>
+</html>

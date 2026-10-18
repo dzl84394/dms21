@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('业务模块管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('module')}"></div>
+
+<main class="content">
+<h1>业务模块</h1>
+<p class="desc">
+    子系统内的功能模块划分（公司 → 业务领域 → 子系统 → 业务模块）。支持按公司过滤 + 关键词（名称/英文名）过滤。
+    <a th:href="@{/admin/module/form}" style="color:#3742fa;">+ 添加业务模块</a>
+</p>
+
+<!-- 过滤：GET 表单，按公司下拉 + 关键词，条件改变后回车/点搜索即生效 -->
+<form method="get" action="/admin/module" class="toolbar">
+    <select name="companyId" style="font-size:13px;padding:5px 8px;">
+        <option value="">全部公司</option>
+        <option th:each="c : ${companies}" th:value="${c.id}" th:text="${(c.shortName != null and !c.shortName.isEmpty()) ? c.shortName : c.fullName}"
+                th:selected="${companyId != null and companyId == c.id}">某某科技</option>
+    </select>
+    <input type="text" name="keyword" th:value="${keyword}" placeholder="名称/英文名" style="width:220px;">
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/module}" th:if="${companyId != null or keyword != ''}" style="color:#3742fa;">清除条件</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>名称</th>
+        <th>所属公司</th>
+        <th>所属业务领域</th>
+        <th>所属子系统</th>
+        <th>英文名称</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(items)}">
+        <td colspan="7" class="muted">暂无业务模块，点上方"添加业务模块"录入第一条（需先有子系统）。</td>
+    </tr>
+    <tr th:each="e : ${items}">
+        <td><b th:text="${e.name}">订单中心</b></td>
+        <td th:text="${companyNames[e.companyId]}">某某科技</td>
+        <td th:text="${domainNames[e.bizDomainId]}">交易</td>
+        <td th:text="${subsystemNames[e.subsystemId]}">交易平台</td>
+        <td th:text="${e.englishName != null and !e.englishName.isEmpty()} ? ${e.englishName} : '-'">Order Center</td>
+        <td class="muted" th:text="${#temporals.format(e.updatedAt, 'MM-dd HH:mm')}">10-17 12:00</td>
+        <td class="inline-form">
+            <a th:href="@{/admin/module/form(id=${e.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/module/delete/' + ${e.id}}" style="display:inline;">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>

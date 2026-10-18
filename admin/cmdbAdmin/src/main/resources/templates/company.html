@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('公司管理', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('company')}"></div>
+
+<main class="content">
+<h1>公司</h1>
+<p class="desc">
+    CMDB 顶层配置项：业务领域等下级配置项按公司隔离。支持按关键词（编号/全称/简称/英文名）过滤。
+    <a th:href="@{/admin/company/form}" style="color:#3742fa;">+ 添加公司</a>
+</p>
+
+<!-- 过滤：GET 表单，条件改变后回车/点搜索即生效 -->
+<form method="get" action="/admin/company" class="toolbar">
+    <input type="text" name="keyword" th:value="${keyword}" placeholder="编号/全称/简称/英文名" style="width:240px;">
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/company}" th:if="${keyword != ''}" style="color:#3742fa;">清除条件</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>编号</th>
+        <th>中文全称</th>
+        <th>简称</th>
+        <th>英文名称</th>
+        <th>主业域名</th>
+        <th>介绍说明</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(items)}">
+        <td colspan="8" class="muted">暂无公司，点上方"添加公司"录入第一条。</td>
+    </tr>
+    <tr th:each="e : ${items}">
+        <td><b th:text="${e.code}">C001</b></td>
+        <td th:text="${e.fullName}">某某科技股份有限公司</td>
+        <td th:text="${e.shortName != null and !e.shortName.isEmpty()} ? ${e.shortName} : '-'">某某科技</td>
+        <td th:text="${e.englishName != null and !e.englishName.isEmpty()} ? ${e.englishName} : '-'">-</td>
+        <td th:text="${e.domain != null and !e.domain.isEmpty()} ? ${e.domain} : '-'">-</td>
+        <td class="muted" th:text="${e.description != null and !e.description.isEmpty()} ? ${e.description} : '-'">-</td>
+        <td class="muted" th:text="${#temporals.format(e.updatedAt, 'MM-dd HH:mm')}">10-17 12:00</td>
+        <td class="inline-form">
+            <a th:href="@{/admin/company/form(id=${e.id})}" style="color:#3742fa;">编辑</a>
+            <form method="post" th:action="@{'/admin/company/delete/' + ${e.id}}" style="display:inline;">
+                <button type="submit" class="del">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>
