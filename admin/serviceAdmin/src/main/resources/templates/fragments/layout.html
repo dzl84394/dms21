@@ -90,11 +90,11 @@
 
 <!--
   左侧导航 fragment，分三段：
-    第一段 main-nav：本服务功能 —— Eureka 查看 / 业务领域管理 / 子系统管理 / 微服务管理 / 中间件管理
+    第一段 main-nav：本服务功能 —— Eureka 查看
+    （微服务/中间件管理已迁至 cmdbAdmin 8091，经侧边栏"CMDB"入口维护）
     第二段 main-nav：跨服务跳转统一沉底（按端口排序，SSO 后 Cookie 直接生效）
     第三段 main-nav：退出登录
   新增功能页面时在对应 nav 里加 <a>，并同步更新上方的 active 取值注释
-  pendingCount > 0 时在"微服务管理"旁显示待确认数量提醒
 -->
 <div class="sidebar" th:fragment="sidebar(active)">
     <div class="brand">serviceAdmin</div>
@@ -102,21 +102,14 @@
         <a th:href="@{/admin}" th:classappend="${active == 'dashboard'} ? 'on'">
             <span>Eureka 查看</span>
         </a>
-        <a th:href="@{/admin/groups}" th:classappend="${active == 'groups'} ? 'on'">
-            <span>业务领域管理</span>
+        <a th:href="@{/admin/services}">
+            <span>微服务管理</span><span class="count">8091</span>
         </a>
-        <a th:href="@{/admin/subsystem}" th:classappend="${active == 'subsystem'} ? 'on'">
-            <span>子系统管理</span>
-        </a>
-        <a th:href="@{/admin/services}" th:classappend="${active == 'services'} ? 'on'">
-            <span>微服务管理</span>
-            <span class="count" th:if="${pendingCount > 0}" th:text="${pendingCount}">0</span>
-        </a>
-        <a th:href="@{/admin/middleware}" th:classappend="${active == 'middleware'} ? 'on'">
-            <span>中间件管理</span>
+        <a th:href="@{/admin/middleware}">
+            <span>中间件管理</span><span class="count">8091</span>
         </a>
     </nav>
-    <!-- 跨服务跳转统一沉底（按端口排序）：权限管理(8084)/架构管理(8085)/项目与需求管理(8086)/DevOps(8087)/基础服务中心(8088)/公共能力(8089) -->
+    <!-- 跨服务跳转统一沉底（按端口排序）：权限管理(8084)/架构管理(8085)/项目与需求管理(8086)/DevOps(8087)/基础服务中心(8088)/公共能力(8089)/接口管理(8090)/CMDB(8091) -->
     <nav class="main-nav">
         <a th:href="${userAdminUrl + '/admin/users'}">
             <span>权限管理</span><span class="count">8084</span>
@@ -135,6 +128,12 @@
         </a>
         <a th:href="${commonAdminUrl + '/admin/docs'}">
             <span>公共能力</span><span class="count">8089</span>
+        </a>
+        <a th:href="${apiAdminUrl + '/admin/apis'}">
+            <span>接口管理</span><span class="count">8090</span>
+        </a>
+        <a th:href="${cmdbAdminUrl + '/admin'}">
+            <span>CMDB</span><span class="count">8091</span>
         </a>
     </nav>
     <!-- 退出登录：清除 DMS_TOKEN Cookie（localhost 全域生效，userAdmin 一并退出） -->

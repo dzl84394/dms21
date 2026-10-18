@@ -12,14 +12,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 依赖关系节点清单客户端：节点主数据（微服务映射 + 中间件）在 serviceAdmin 维护，
+ * 依赖关系节点清单客户端：节点主数据（微服务映射 + 中间件）已迁至 cmdbAdmin 维护，
  * archAdmin 通过 Eureka 调其内部接口拉取，用于依赖边的下拉选择与列表展示。
  *
- * 链路：GET http://<service-admin 实例>/api/nodes
+ * 链路：GET http://<cmdb-admin 实例>/api/nodes
  *       → [{serviceName:"eureka", serviceNameCn:"Eureka 注册中心", category:"注册配置中心",
  *           subCategory:"Eureka", bizService:false}, ...]
  *
- * 容错策略与 SubsystemClient 一致（依赖关系页面不能因 serviceAdmin 短暂抖动就白屏）：
+ * 容错策略与 SubsystemClient 一致（依赖关系页面不能因 cmdbAdmin 短暂抖动就白屏）：
  *   1. 内存短期缓存（30 秒），绝大多数请求不发起 HTTP；
  *   2. 调用失败时沿用上次成功的缓存；
  *   3. 从没拉成功过则返回空清单（页面提示节点清单不可用，保存降级为基本校验）。
@@ -29,8 +29,8 @@ public class NodeClient {
 
     private static final Logger log = LoggerFactory.getLogger(NodeClient.class);
 
-    /** serviceAdmin 在 Eureka 里的服务名 */
-    private static final String SERVICE_ID = "service-admin";
+    /** cmdbAdmin 在 Eureka 里的服务名（节点主数据已迁移至此） */
+    private static final String SERVICE_ID = "cmdb-admin";
     /** 节点清单内部接口路径（/api/** 免登录） */
     private static final String API_PATH = "/api/nodes";
     /** 清单缓存有效期（毫秒） */

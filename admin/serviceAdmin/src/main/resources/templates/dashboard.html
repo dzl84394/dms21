@@ -50,8 +50,6 @@
     <tr th:each="row : ${rows}">
         <td>
             <span th:text="${row.service}">service-a</span>
-            <!-- 中文说明：微服务管理页人工编辑的（没填不显示） -->
-            <span class="sys" th:if="${row.serviceCn != ''}" th:text="${row.serviceCn}">服务A-订单中心</span>
         </td>
         <!-- 业务领域/子系统：库映射（优先）或服务自身 Eureka metadata，
              有中文说明时显示"编码·中文名"（如 xw·信维业务线），无分组显示 "-" -->

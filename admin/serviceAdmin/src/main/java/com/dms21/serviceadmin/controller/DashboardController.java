@@ -1,8 +1,7 @@
 package com.dms21.serviceadmin.controller;
 
-import com.dms21.serviceadmin.entity.ServiceGroupEntity;
+import com.dms21.serviceadmin.client.CmdbClient;
 import com.dms21.serviceadmin.service.MonitorService;
-import com.dms21.serviceadmin.service.ServiceGroupService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,13 +21,14 @@ import java.util.TreeSet;
 /**
  * 服务清单页面（Thymeleaf 服务端渲染）
  *
- * 定位变化：不再主动探测服务的 actuator（健康/指标），只做"服务清单 + 分组管理"：
+ * 定位：只读 Eureka 注册表缓存，不做主动探测；微服务落库管理已迁至 cmdbAdmin（8091）。
  *   - 数据全部来自 Eureka client 本地注册表缓存（零网络开销，毫秒级出页面）
+ *   - 业务领域/子系统/负责人等人工维护数据在 cmdbAdmin，本页只显示 Eureka metadata 原始值
  *   - 每个服务的状态细节由行内"详情"链接跳转到 Spring Boot Admin（SBA）查看
  *
  * 访问：GET http://localhost:8083/admin
  *       ?q=订单              关键字（服务名/中文说明）
- *       &bizGroup=xw&bizGroup=hx   业务领域过滤（可多选）
+ *       &bizGroup=xw&bizGroup=hx   业务领域过滤（可多选，按 Eureka metadata 值过滤）
  *       &page=2              页码（每页 PAGE_SIZE 个服务）
  * 页面通过 <meta http-equiv="refresh"> 每 30 秒自动刷新
  */
@@ -39,15 +39,15 @@ public class DashboardController {
     private static final int PAGE_SIZE = 50;
 
     private final MonitorService monitorService;
-    private final ServiceGroupService serviceGroupService;
+    private final CmdbClient cmdbClient;
 
     /** Spring Boot Admin Server 地址，"详情"跳转用；application.yml 的 sba.url 可覆盖 */
     @Value("${sba.url:http://localhost:8080}")
     private String sbaUrl;
 
-    public DashboardController(MonitorService monitorService, ServiceGroupService serviceGroupService) {
+    public DashboardController(MonitorService monitorService, CmdbClient cmdbClient) {
         this.monitorService = monitorService;
-        this.serviceGroupService = serviceGroupService;
+        this.cmdbClient = cmdbClient;
     }
 
     /**
@@ -62,10 +62,8 @@ public class DashboardController {
                             @RequestParam(required = false, defaultValue = "") String q,
                             @RequestParam(defaultValue = "1") int page,
                             Model model) {
-        // 库里的"服务名→业务领域"映射（一次查全表），展示以人工维护的库数据优先
-        Map<String, ServiceGroupEntity> groupMap = serviceGroupService.groupMap();
-        // 业务领域字典：编码 → 中文说明，业务领域列显示"编码·中文名"
-        Map<String, String> dictNames = serviceGroupService.dictNameMap();
+        // 业务领域编码 → 中文说明（主数据在 cmdbAdmin，经 CmdbClient 30s 缓存拉取），业务领域列显示"编码·中文名"
+        Map<String, String> dictNames = cmdbClient.bizGroupNameMap();
         // 已选中的业务领域过滤条件；未选任何组 = 显示全部
         Set<String> selectedGroups = (bizGroup == null || bizGroup.isEmpty())
                 ? Set.of() : new HashSet<>(bizGroup);
@@ -82,18 +80,15 @@ public class DashboardController {
             List<?> instances = svc.get("instances") instanceof List<?> list ? list : List.of();
             totalInstances += instances.size();
 
-            // 业务领域：库优先，否则该服务第一个实例的 Eureka metadata
-            String group = resolveServiceField(name, instances, groupMap, "bizGroup");
+            // 业务领域/子系统：只取 Eureka metadata 原始值（人工维护数据在 cmdbAdmin）
+            String group = metadataValue(instances, "bizGroup");
             allGroups.add(group);
 
-            // 过滤：业务领域多选 + 关键字（服务名/中文说明）
+            // 过滤：业务领域多选 + 关键字（服务名）
             if (!selectedGroups.isEmpty() && !selectedGroups.contains(group)) {
                 continue;
             }
-            String cn = resolveServiceCn(name, groupMap);
-            if (!needle.isEmpty()
-                    && !name.toLowerCase().contains(needle)
-                    && !cn.toLowerCase().contains(needle)) {
+            if (!needle.isEmpty() && !name.toLowerCase().contains(needle)) {
                 continue;
             }
 
@@ -102,12 +97,10 @@ public class DashboardController {
 
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("service", name);
-            // 微服务中文说明：库里确认过的映射里取（没填显示空）
-            row.put("serviceCn", cn);
             row.put("bizGroup", group);
             // 中文说明：来自业务领域字典，页面上显示"编码·中文名"
             row.put("bizGroupName", dictNames.getOrDefault(group, ""));
-            row.put("subsystem", resolveServiceField(name, instances, groupMap, "subsystem"));
+            row.put("subsystem", metadataValue(instances, "subsystem"));
             row.put("instanceCount", instances.size());
             row.put("status", status);
             // 状态详情跳 Spring Boot Admin：SBA 实例页按 serviceId 过滤
@@ -163,43 +156,16 @@ public class DashboardController {
     }
 
     /**
-     * 服务级字段解析（bizGroup/system），取值优先级：
-     *   1. H2 库里人工维护的值（非空才用）
-     *   2. 该服务实例的 Eureka metadata 里的值（取第一个实例）
-     *   3. 都没有 → "-"
-     */
-    private String resolveServiceField(String service, List<?> instances,
-                                       Map<String, ServiceGroupEntity> groupMap, String field) {
-        ServiceGroupEntity entity = groupMap.get(service.toLowerCase());
-        if (entity != null) {
-            String value = "bizGroup".equals(field) ? entity.getBizGroup() : entity.getSubsystem();
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        if (!instances.isEmpty() && instances.get(0) instanceof Map<?, ?> instance) {
-            return metadataValue(instance, field);
-        }
-        return "-";
-    }
-
-    /**
-     * 取微服务的中文说明（管理页人工编辑的），库里没有/没填返回空串
-     */
-    private String resolveServiceCn(String service, Map<String, ServiceGroupEntity> groupMap) {
-        ServiceGroupEntity entity = groupMap.get(service.toLowerCase());
-        if (entity != null && entity.getServiceNameCn() != null) {
-            return entity.getServiceNameCn();
-        }
-        return "";
-    }
-
-    /**
      * 从实例信息里取 Eureka 元数据（eureka.instance.metadata-map 配置的键值对）
      * 未配置该 key 时返回 "-"，页面上显示占位
      */
-    private String metadataValue(Map<?, ?> instance, String key) {
-        if (instance.get("metadata") instanceof Map<?, ?> meta && meta.get(key) != null) {
+    private String metadataValue(List<?> instances, String key) {
+        if (instances.isEmpty()) {
+            return "-";
+        }
+        if (instances.get(0) instanceof Map<?, ?> instance
+                && instance.get("metadata") instanceof Map<?, ?> meta
+                && meta.get(key) != null) {
             return String.valueOf(meta.get(key));
         }
         return "-";

@@ -39,4 +39,20 @@ public class RestClientConfig {
                 .requestFactory(factory)
                 .build();
     }
+
+    /**
+     * 专用于调用 cmdbAdmin 内部接口（/api/bizdomains 等）的 RestClient，短超时快速失败
+     * cmdbAdmin 挂掉时 CmdbClient 靠缓存兜底，页面不能白屏，所以同样 2s/3s
+     */
+    @Bean
+    public RestClient cmdbRestClient() {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(2))
+                .build();
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofSeconds(3));
+        return RestClient.builder()
+                .requestFactory(factory)
+                .build();
+    }
 }

@@ -12,10 +12,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 子系统清单客户端：archAdmin 不维护子系统主数据，通过 Eureka 调 serviceAdmin 的内部接口拉取
+ * 子系统清单客户端：archAdmin 不维护子系统主数据，通过 Eureka 调 cmdbAdmin 的内部接口拉取
+ * （领域/子系统主数据统一由 cmdbAdmin 提供，serviceAdmin 侧字典功能已删除）
  *
- * 链路：GET http://<service-admin 实例>/api/subsystems
- *       → [{code:"admin", name:"...", bizGroup:"platform"}, ...]
+ * 链路：GET http://<cmdb-admin 实例>/api/subsystems
+ *       → [{code:"S001", name:"交易平台", bizGroup:"D001"}, ...]
  *
  * 容错策略（架构管理页面不能因子系统服务短暂抖动就白屏）：
  *   1. 内存短期缓存（默认 30 秒），侧边栏每次渲染都问本客户端，绝大多数请求不发起 HTTP；
@@ -32,8 +33,8 @@ public class SubsystemClient {
 
     private static final Logger log = LoggerFactory.getLogger(SubsystemClient.class);
 
-    /** serviceAdmin 在 Eureka 里的服务名 */
-    private static final String SERVICE_ID = "service-admin";
+    /** cmdbAdmin 在 Eureka 里的服务名（子系统主数据源） */
+    private static final String SERVICE_ID = "cmdb-admin";
     /** 子系统清单内部接口路径（/api/** 免登录） */
     private static final String API_PATH = "/api/subsystems";
     /** 清单缓存有效期（毫秒） */

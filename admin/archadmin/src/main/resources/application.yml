@@ -31,6 +31,10 @@ auth:
   cookie-name: DMS_TOKEN
   login-url: http://localhost:8083/login
 
+# cmdbAdmin 页面地址：CMDB 已独立为 cmdbAdmin（8091），本地旧路由 /admin/cmdb 302 过去
+cmdbadmin:
+  url: http://localhost:8091
+
 # 注册到 Eureka（baseDemo/eureka）
 eureka:
   client:

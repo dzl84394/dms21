@@ -54,6 +54,12 @@ baseadmin:
 # commonAdmin 页面地址：侧边栏"公共能力平台"跨服务跳转用（登录后 Cookie 直接生效）
 commonadmin:
   url: http://localhost:8089
+# apiAdmin 页面地址：侧边栏"接口管理"跨服务跳转用（登录后 Cookie 直接生效）
+apiadmin:
+  url: http://localhost:8090
+# cmdbAdmin 页面地址：侧边栏"CMDB"跨服务跳转用（登录后 Cookie 直接生效）
+cmdbadmin:
+  url: http://localhost:8091
 
 # 注册到 Eureka（baseDemo/eureka）
 eureka:

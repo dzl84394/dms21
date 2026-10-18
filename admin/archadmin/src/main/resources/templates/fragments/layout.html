@@ -95,9 +95,9 @@
         <a th:href="@{/admin/dependencies}" th:classappend="${activeCode == 'dependencies'} ? 'on'">
             <span>依赖关系</span>
         </a>
-        <!-- CMDB：自 projectAdmin 迁入，配置管理数据库（主机/资源/应用等 CI 登记） -->
-        <a th:href="@{/admin/cmdb}" th:classappend="${activeCode == 'cmdb'} ? 'on'">
-            <span>CMDB</span>
+        <!-- CMDB：已独立为 cmdbAdmin（8091），跨服务跳转（SSO 已打通，Cookie 直接生效） -->
+        <a href="http://localhost:8091/admin">
+            <span>CMDB</span><span class="count">8091</span>
         </a>
         <div class="tree-title">子系统</div>
         <a th:if="${#lists.isEmpty(subsystems)}" class="muted" style="cursor:default;">

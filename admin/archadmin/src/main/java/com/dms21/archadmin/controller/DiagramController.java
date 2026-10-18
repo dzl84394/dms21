@@ -47,13 +47,16 @@ public class DiagramController {
     }
 
     /**
-     * CMDB（自 projectAdmin 迁入，占位）：配置管理数据库，登记主机/资源/应用等配置项（CI）
+     * CMDB：已独立为 cmdbAdmin（8091，侧边栏"CMDB"直接跳转过去），
+     * 这里保留旧路径做 302，兼容书签/历史链接。
      *
-     * 示例：浏览器打开 http://localhost:8085/admin/cmdb
+     * 示例：浏览器打开 http://localhost:8085/admin/cmdb → 302 http://localhost:8091/admin
      */
     @GetMapping("/admin/cmdb")
-    public String cmdb() {
-        return "cmdb";
+    public String cmdb(
+            @org.springframework.beans.factory.annotation.Value("${cmdbadmin.url:http://localhost:8091}")
+            String cmdbAdminUrl) {
+        return "redirect:" + cmdbAdminUrl + "/admin";
     }
 
     /**
