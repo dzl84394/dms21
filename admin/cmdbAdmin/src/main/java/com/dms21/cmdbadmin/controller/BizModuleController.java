@@ -1,10 +1,8 @@
 package com.dms21.cmdbadmin.controller;
 
-import com.dms21.cmdbadmin.entity.BizModuleEntity;
-import com.dms21.cmdbadmin.service.BizDomainService;
-import com.dms21.cmdbadmin.service.BizModuleService;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.service.CompanyService;
-import com.dms21.cmdbadmin.service.SubsystemService;
+import com.dms21.cmdbadmin.service.MasterNodeService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,7 +14,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 /**
- * 业务模块管理：子系统内的功能模块划分（数据落 cmdbAdmin 自有库 t_biz_module）
+ * 业务模块管理：子系统内的功能模块划分（数据落 cmdbAdmin 自有库 t_master_node，node_type=模块）
+ *
+ * 领域/子系统/模块三级合表存储，页面保持独立路由与表单，底层经 MasterNodeService 统一读写；
+ * 模块的"名称"经实体 getName()/setName() 别名读写 fullName 列，模板零改动
  *
  * 路由（list / form / save / delete 四段式，与公司/业务领域/子系统管理同一模式）：
  *   GET  /admin/module?companyId=&keyword=   列表页（按公司过滤 + 关键词）
@@ -26,25 +27,19 @@ import java.util.List;
  *
  * 表单三级级联：公司 → 业务领域 → 子系统 逐级过滤选项（option 带 data-company/data-domain），
  * 反向默认选中：选子系统后自动带出其所属领域与公司（JS 回填），
- * 服务端保存时直接采用子系统自身的归属落库（company_id/biz_domain_id 冗余）。
+ * 服务端保存时直接采用子系统自身的归属落库（company_id 冗余）。
  */
 @Controller
 @RequestMapping("/admin/module")
 public class BizModuleController {
 
-    private final BizModuleService bizModuleService;
+    private final MasterNodeService masterNodeService;
     private final CompanyService companyService;
-    private final BizDomainService bizDomainService;
-    private final SubsystemService subsystemService;
 
-    public BizModuleController(BizModuleService bizModuleService,
-                               CompanyService companyService,
-                               BizDomainService bizDomainService,
-                               SubsystemService subsystemService) {
-        this.bizModuleService = bizModuleService;
+    public BizModuleController(MasterNodeService masterNodeService,
+                               CompanyService companyService) {
+        this.masterNodeService = masterNodeService;
         this.companyService = companyService;
-        this.bizDomainService = bizDomainService;
-        this.subsystemService = subsystemService;
     }
 
     /**
@@ -56,14 +51,12 @@ public class BizModuleController {
     public String list(@RequestParam(required = false) Long companyId,
                        @RequestParam(required = false, defaultValue = "") String keyword,
                        Model model) {
-        List<BizModuleEntity> items = bizModuleService.search(companyId, keyword);
+        List<MasterNodeEntity> items = masterNodeService.searchModules(companyId, keyword);
         model.addAttribute("items", items);
         // 公司名/领域名/子系统名映射（id → 简称/全称），页面"所属"三列显示用
-        model.addAttribute("companyNames", subsystemService.companyNamesByIds(
-                items.stream().map(BizModuleEntity::getCompanyId).toList()));
-        model.addAttribute("domainNames", subsystemService.domainNamesByIds(
-                items.stream().map(BizModuleEntity::getBizDomainId).toList()));
-        model.addAttribute("subsystemNames", bizModuleService.subsystemNames(items));
+        model.addAttribute("companyNames", masterNodeService.companyNames(items));
+        model.addAttribute("domainNames", masterNodeService.domainNamesOfModules(items));
+        model.addAttribute("subsystemNames", masterNodeService.subsystemNames(items));
         model.addAttribute("companies", companyService.listAll()); // 过滤下拉
         model.addAttribute("companyId", companyId);
         model.addAttribute("keyword", keyword);
@@ -78,19 +71,19 @@ public class BizModuleController {
      */
     @GetMapping("/form")
     public String form(@RequestParam(required = false) Long id, Model model) {
-        if (id != null && bizModuleService.findById(id) == null) {
+        if (id != null && masterNodeService.findById(id) == null) {
             return "redirect:/admin/module";
         }
-        model.addAttribute("module", bizModuleService.findById(id)); // null=新增模式
+        model.addAttribute("module", masterNodeService.findById(id)); // null=新增模式
         model.addAttribute("companies", companyService.listAll());
-        model.addAttribute("bizDomains", bizDomainService.listAll());
-        model.addAttribute("subsystems", subsystemService.listAll());
+        model.addAttribute("bizDomains", masterNodeService.listAll(MasterNodeEntity.TYPE_DOMAIN));
+        model.addAttribute("subsystems", masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM));
         return "bizmodule_form";
     }
 
     /**
      * 保存业务模块：id 空=新增，非空=编辑
-     * 只提交子系统 id + 名称 + 英文名称，公司/领域由服务端按子系统归属自动落库
+     * 只提交子系统 id + 名称 + 英文名称，公司由服务端按子系统归属自动落库
      *
      * 示例：curl -X POST http://localhost:8091/admin/module/save \
      *         -d "subsystemId=1" -d "name=订单中心" -d "englishName=Order Center"
@@ -101,7 +94,7 @@ public class BizModuleController {
                        @RequestParam Long subsystemId,
                        @RequestParam String name,
                        @RequestParam(required = false) String englishName) {
-        BizModuleEntity saved = bizModuleService.save(id, subsystemId, name, englishName);
+        MasterNodeEntity saved = masterNodeService.saveModule(id, subsystemId, name, englishName);
         return "redirect:/admin/module?companyId=" + saved.getCompanyId();
     }
 
@@ -112,7 +105,7 @@ public class BizModuleController {
      */
     @PostMapping("/delete/{id}")
     public String delete(@PathVariable Long id) {
-        bizModuleService.delete(id);
+        masterNodeService.deleteModule(id);
         return "redirect:/admin/module";
     }
 }

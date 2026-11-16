@@ -1,8 +1,8 @@
 package com.dms21.cmdbadmin.controller;
 
-import com.dms21.cmdbadmin.entity.BizDomainEntity;
-import com.dms21.cmdbadmin.service.BizDomainService;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.service.CompanyService;
+import com.dms21.cmdbadmin.service.MasterNodeService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,23 +17,26 @@ import java.util.Map;
 /**
  * 业务领域管理：公司下的业务板块划分，按公司租户隔离（company_id 关联 t_company）
  *
+ * 数据落 t_master_node（node_type=领域，parent 为空）——领域/子系统/模块三级合表存储，
+ * 页面仍保持独立路由与表单，底层经 MasterNodeService 统一读写
+ *
  * 路由（list / form / save / delete 四段式，与 projectAdmin 工时管理同一模式）：
  *   GET  /admin/bizdomain?companyId=&keyword=   列表页（按公司过滤 + 关键词）
  *   GET  /admin/bizdomain/form                  新增/编辑共用表单（带 id=编辑，否则新增）
  *   POST /admin/bizdomain/save                  保存（id 空=新增，非空=编辑）
  *   POST /admin/bizdomain/delete/{id}           删除
  *
- * 公司名显示基于 ID 手动查询（bizDomainService.companyNames），不用 @ManyToMany
+ * 公司名显示基于 ID 手动查询（masterNodeService.companyNames），不用 @ManyToMany
  */
 @Controller
 @RequestMapping("/admin/bizdomain")
 public class BizDomainController {
 
-    private final BizDomainService bizDomainService;
+    private final MasterNodeService masterNodeService;
     private final CompanyService companyService;
 
-    public BizDomainController(BizDomainService bizDomainService, CompanyService companyService) {
-        this.bizDomainService = bizDomainService;
+    public BizDomainController(MasterNodeService masterNodeService, CompanyService companyService) {
+        this.masterNodeService = masterNodeService;
         this.companyService = companyService;
     }
 
@@ -46,10 +49,10 @@ public class BizDomainController {
     public String list(@RequestParam(required = false) Long companyId,
                        @RequestParam(required = false, defaultValue = "") String keyword,
                        Model model) {
-        List<BizDomainEntity> items = bizDomainService.search(companyId, keyword);
+        List<MasterNodeEntity> items = masterNodeService.searchDomains(companyId, keyword);
         model.addAttribute("items", items);
         // 公司名映射（id → 简称/全称），页面"所属公司"列显示用
-        model.addAttribute("companyNames", bizDomainService.companyNames(items));
+        model.addAttribute("companyNames", masterNodeService.companyNames(items));
         model.addAttribute("companies", companyService.listAll()); // 过滤下拉与表单选项
         model.addAttribute("companyId", companyId);
         model.addAttribute("keyword", keyword);
@@ -64,10 +67,10 @@ public class BizDomainController {
      */
     @GetMapping("/form")
     public String form(@RequestParam(required = false) Long id, Model model) {
-        if (id != null && bizDomainService.findById(id) == null) {
+        if (id != null && masterNodeService.findById(id) == null) {
             return "redirect:/admin/bizdomain";
         }
-        model.addAttribute("bizDomain", bizDomainService.findById(id)); // null=新增模式
+        model.addAttribute("bizDomain", masterNodeService.findById(id)); // null=新增模式
         model.addAttribute("companies", companyService.listAll());
         return "bizdomain_form";
     }
@@ -88,7 +91,8 @@ public class BizDomainController {
                        @RequestParam String code,
                        @RequestParam(required = false) String englishName,
                        @RequestParam(required = false) String description) {
-        BizDomainEntity saved = bizDomainService.save(id, companyId, fullName, shortName, code, englishName, description);
+        MasterNodeEntity saved = masterNodeService.saveDomain(id, companyId, fullName, shortName,
+                code, englishName, description);
         return "redirect:/admin/bizdomain?companyId=" + saved.getCompanyId();
     }
 
@@ -99,7 +103,7 @@ public class BizDomainController {
      */
     @PostMapping("/delete/{id}")
     public String delete(@PathVariable Long id) {
-        bizDomainService.delete(id);
+        masterNodeService.deleteDomain(id);
         return "redirect:/admin/bizdomain";
     }
 }

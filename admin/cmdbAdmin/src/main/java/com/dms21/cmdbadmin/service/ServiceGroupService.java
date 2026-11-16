@@ -1,9 +1,9 @@
 package com.dms21.cmdbadmin.service;
 
 import com.dms21.cmdbadmin.entity.ServiceGroupEntity;
-import com.dms21.cmdbadmin.entity.SubsystemEntity;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.repository.ServiceGroupRepository;
-import com.dms21.cmdbadmin.repository.SubsystemRepository;
+import com.dms21.cmdbadmin.repository.MasterNodeRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
@@ -23,7 +23,7 @@ import java.util.Map;
  *   2. 人工维护：页面上手动新增/修改/删除（中间件纯人工录入）
  *
  * 与旧 serviceAdmin 实现的差异：
- *   - 业务领域/子系统不再存编码字符串，改存 subsystem_id（手动关联 t_subsystem）
+ *   - 业务领域/子系统不再存编码字符串，改存 subsystem_id（手动关联 t_master_node 的子系统节点）
  *   - Eureka 同步时按 metadata 的 subsystem 编码匹配子系统，匹配不到置 null（页面上可人工补挂）
  *   - 微服务/中间件同表，靠 category 大类区分页面归属（业务服务=微服务页，其余=中间件页）
  *
@@ -41,14 +41,14 @@ public class ServiceGroupService {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final ServiceGroupRepository repository;
-    private final SubsystemRepository subsystemRepository;
+    private final MasterNodeRepository masterNodeRepository;
     private final DiscoveryClient discoveryClient;
 
     public ServiceGroupService(ServiceGroupRepository repository,
-                               SubsystemRepository subsystemRepository,
+                               MasterNodeRepository masterNodeRepository,
                                DiscoveryClient discoveryClient) {
         this.repository = repository;
-        this.subsystemRepository = subsystemRepository;
+        this.masterNodeRepository = masterNodeRepository;
         this.discoveryClient = discoveryClient;
     }
 
@@ -162,7 +162,7 @@ public class ServiceGroupService {
     public void syncFromRegistry() {
         // 子系统编码 → id 索引（一次全表加载，同步全程复用）
         Map<String, Long> subsystemIdByCode = new LinkedHashMap<>();
-        for (SubsystemEntity s : subsystemRepository.findAll()) {
+        for (MasterNodeEntity s : masterNodeRepository.findByNodeType(MasterNodeEntity.TYPE_SUBSYSTEM)) {
             subsystemIdByCode.put(s.getCode(), s.getId());
         }
 

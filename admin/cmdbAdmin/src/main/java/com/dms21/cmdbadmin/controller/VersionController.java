@@ -1,9 +1,9 @@
 package com.dms21.cmdbadmin.controller;
 
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.entity.VersionEntity;
-import com.dms21.cmdbadmin.service.BizDomainService;
 import com.dms21.cmdbadmin.service.CompanyService;
-import com.dms21.cmdbadmin.service.SubsystemService;
+import com.dms21.cmdbadmin.service.MasterNodeService;
 import com.dms21.cmdbadmin.service.VersionService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,17 +31,14 @@ public class VersionController {
 
     private final VersionService versionService;
     private final CompanyService companyService;
-    private final BizDomainService bizDomainService;
-    private final SubsystemService subsystemService;
+    private final MasterNodeService masterNodeService;
 
     public VersionController(VersionService versionService,
                              CompanyService companyService,
-                             BizDomainService bizDomainService,
-                             SubsystemService subsystemService) {
+                             MasterNodeService masterNodeService) {
         this.versionService = versionService;
         this.companyService = companyService;
-        this.bizDomainService = bizDomainService;
-        this.subsystemService = subsystemService;
+        this.masterNodeService = masterNodeService;
     }
 
     /**
@@ -56,16 +53,16 @@ public class VersionController {
         java.util.List<VersionEntity> items = versionService.search(subsystemId, keyword);
         model.addAttribute("items", items);
         // 公司名/领域名/子系统名映射（id → 简称/全称），清单页"所属"各列显示用
-        model.addAttribute("companyNames", subsystemService.companyNamesByIds(
+        model.addAttribute("companyNames", masterNodeService.companyNamesByIds(
                 items.stream().map(VersionEntity::getCompanyId).toList()));
-        model.addAttribute("domainNames", subsystemService.domainNamesByIds(
+        model.addAttribute("domainNames", masterNodeService.domainNamesByIds(
                 items.stream().map(VersionEntity::getBizDomainId).toList()));
-        model.addAttribute("subsystemNames", subsystemService.subsystemNamesByIds(
+        model.addAttribute("subsystemNames", masterNodeService.subsystemNamesByIds(
                 items.stream().map(VersionEntity::getSubsystemId).toList()));
         // 过滤区级联下拉数据
         model.addAttribute("companies", companyService.listAll());
-        model.addAttribute("bizDomains", bizDomainService.listAll());
-        model.addAttribute("subsystems", subsystemService.listAll());
+        model.addAttribute("bizDomains", masterNodeService.listAll(MasterNodeEntity.TYPE_DOMAIN));
+        model.addAttribute("subsystems", masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM));
         model.addAttribute("subsystemId", subsystemId);
         model.addAttribute("keyword", keyword);
         return "version";
@@ -86,8 +83,8 @@ public class VersionController {
         }
         model.addAttribute("version", versionService.findById(id)); // null=新增模式
         model.addAttribute("companies", companyService.listAll());
-        model.addAttribute("bizDomains", bizDomainService.listAll());
-        model.addAttribute("subsystems", subsystemService.listAll());
+        model.addAttribute("bizDomains", masterNodeService.listAll(MasterNodeEntity.TYPE_DOMAIN));
+        model.addAttribute("subsystems", masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM));
         model.addAttribute("subsystemId", subsystemId); // 新增时的子系统预选
         return "version_form";
     }

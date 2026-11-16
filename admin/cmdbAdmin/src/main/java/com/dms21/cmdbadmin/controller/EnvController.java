@@ -1,11 +1,11 @@
 package com.dms21.cmdbadmin.controller;
 
 import com.dms21.cmdbadmin.entity.EnvEntity;
-import com.dms21.cmdbadmin.service.BizDomainService;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.service.CompanyService;
 import com.dms21.cmdbadmin.service.EnvService;
+import com.dms21.cmdbadmin.service.MasterNodeService;
 import com.dms21.cmdbadmin.service.ResourceService;
-import com.dms21.cmdbadmin.service.SubsystemService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,19 +35,16 @@ public class EnvController {
     private final EnvService envService;
     private final ResourceService resourceService;
     private final CompanyService companyService;
-    private final BizDomainService bizDomainService;
-    private final SubsystemService subsystemService;
+    private final MasterNodeService masterNodeService;
 
     public EnvController(EnvService envService,
                          ResourceService resourceService,
                          CompanyService companyService,
-                         BizDomainService bizDomainService,
-                         SubsystemService subsystemService) {
+                         MasterNodeService masterNodeService) {
         this.envService = envService;
         this.resourceService = resourceService;
         this.companyService = companyService;
-        this.bizDomainService = bizDomainService;
-        this.subsystemService = subsystemService;
+        this.masterNodeService = masterNodeService;
     }
 
     /**
@@ -58,8 +55,8 @@ public class EnvController {
     @GetMapping
     public String page(@RequestParam(required = false) Long subsystemId, Model model) {
         model.addAttribute("companies", companyService.listAll());
-        model.addAttribute("bizDomains", bizDomainService.listAll());
-        model.addAttribute("subsystems", subsystemService.listAll());
+        model.addAttribute("bizDomains", masterNodeService.listAll(MasterNodeEntity.TYPE_DOMAIN));
+        model.addAttribute("subsystems", masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM));
         model.addAttribute("subsystemId", subsystemId);
         List<EnvEntity> envs = envService.listForSubsystem(subsystemId);
         model.addAttribute("envs", envs);

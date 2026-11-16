@@ -1,8 +1,9 @@
 package com.dms21.cmdbadmin.controller;
 
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.entity.ServiceGroupEntity;
+import com.dms21.cmdbadmin.service.MasterNodeService;
 import com.dms21.cmdbadmin.service.ServiceGroupService;
-import com.dms21.cmdbadmin.service.SubsystemService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +33,7 @@ import java.util.Map;
  * + 人工维护（补中文说明、选子系统、填负责人 → 点"确认固定"后同步不再覆盖）。
  * 中间件纯人工录入，不来自 Eureka。
  *
- * 子系统归属存 subsystem_id（手动关联 t_subsystem），下拉选项带 data-company/data-domain
+ * 子系统归属存 subsystem_id（手动关联 t_master_node 的子系统节点），下拉选项带 data-company/data-domain
  * 供页面三级级联过滤；选中的子系统必须存在（服务端校验）。
  */
 @Controller
@@ -40,12 +41,12 @@ import java.util.Map;
 public class ServiceGroupController {
 
     private final ServiceGroupService serviceGroupService;
-    private final SubsystemService subsystemService;
+    private final MasterNodeService masterNodeService;
 
     public ServiceGroupController(ServiceGroupService serviceGroupService,
-                                  SubsystemService subsystemService) {
+                                  MasterNodeService masterNodeService) {
         this.serviceGroupService = serviceGroupService;
-        this.subsystemService = subsystemService;
+        this.masterNodeService = masterNodeService;
     }
 
     // ---------- 微服务管理 ----------
@@ -67,9 +68,9 @@ public class ServiceGroupController {
         model.addAttribute("result",
                 serviceGroupService.search(q, subsystemId, status, "business", page, 20));
         // 子系统下拉（过滤+编辑共用），option 带 data-company/data-domain 供三级级联
-        model.addAttribute("subsystems", subsystemService.listAll());
+        model.addAttribute("subsystems", masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM));
         model.addAttribute("subsystemNames",
-                subsystemService.subsystemNamesByIds(
+                masterNodeService.subsystemNamesByIds(
                         serviceGroupService.listAll().stream()
                                 .map(ServiceGroupEntity::getSubsystemId).toList()));
         // 回填查询条件
@@ -97,7 +98,7 @@ public class ServiceGroupController {
                               @RequestParam(required = false) String opsOwner,
                               @RequestParam(required = false, defaultValue = "false") boolean confirm) {
         // 子系统存在性校验（防传错 id）
-        if (subsystemId != null && subsystemService.findById(subsystemId) == null) {
+        if (subsystemId != null && masterNodeService.findById(subsystemId) == null) {
             throw new IllegalArgumentException("子系统不存在: id=" + subsystemId);
         }
         serviceGroupService.upsert(id, serviceName, serviceNameCn, subsystemId,
@@ -139,7 +140,7 @@ public class ServiceGroupController {
         model.addAttribute("allSubCategories",
                 ServiceGroupEntity.MIDDLEWARE.values().stream().flatMap(List::stream).toList());
         model.addAttribute("subsystemNames",
-                subsystemService.subsystemNamesByIds(
+                masterNodeService.subsystemNamesByIds(
                         serviceGroupService.listAll().stream()
                                 .map(ServiceGroupEntity::getSubsystemId).toList()));
         // 回填查询条件
@@ -167,7 +168,7 @@ public class ServiceGroupController {
         model.addAttribute("categories", ServiceGroupEntity.MIDDLEWARE);
         model.addAttribute("allSubCategories",
                 ServiceGroupEntity.MIDDLEWARE.values().stream().flatMap(List::stream).toList());
-        model.addAttribute("subsystems", subsystemService.listAll());
+        model.addAttribute("subsystems", masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM));
         return "middleware_form";
     }
 
@@ -190,7 +191,7 @@ public class ServiceGroupController {
                                  @RequestParam(required = false) String techOwner,
                                  @RequestParam(required = false) String bizOwner,
                                  @RequestParam(required = false) String opsOwner) {
-        if (subsystemId != null && subsystemService.findById(subsystemId) == null) {
+        if (subsystemId != null && masterNodeService.findById(subsystemId) == null) {
             throw new IllegalArgumentException("子系统不存在: id=" + subsystemId);
         }
         serviceGroupService.upsert(id, serviceName, serviceNameCn, subsystemId,

@@ -1,10 +1,10 @@
 package com.dms21.cmdbadmin.service;
 
 import com.dms21.cmdbadmin.entity.EnvEntity;
-import com.dms21.cmdbadmin.entity.SubsystemEntity;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.repository.EnvRepository;
+import com.dms21.cmdbadmin.repository.MasterNodeRepository;
 import com.dms21.cmdbadmin.repository.ResourceRepository;
-import com.dms21.cmdbadmin.repository.SubsystemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +14,8 @@ import java.util.List;
  * 环境管理：子系统下的部署环境（选中子系统后单页维护）
  *
  * 默认环境 DEV/STG/UAT/PROD（EnvEntity.DEFAULT_NAMES），一键初始化幂等（已存在的跳过）；
- * company_id/biz_domain_id 冗余自子系统归属，保存时以子系统自身归属为准
+ * company_id/biz_domain_id 冗余自子系统归属（子系统节点 = t_master_node 中 node_type=子系统），
+ * 保存时以子系统自身归属为准
  *
  * 示例：
  *   envService.listForSubsystem(1L);              // 子系统 1 的环境清单
@@ -25,14 +26,14 @@ import java.util.List;
 public class EnvService {
 
     private final EnvRepository envRepository;
-    private final SubsystemRepository subsystemRepository;
+    private final MasterNodeRepository masterNodeRepository;
     private final ResourceRepository resourceRepository;
 
     public EnvService(EnvRepository envRepository,
-                      SubsystemRepository subsystemRepository,
+                      MasterNodeRepository masterNodeRepository,
                       ResourceRepository resourceRepository) {
         this.envRepository = envRepository;
-        this.subsystemRepository = subsystemRepository;
+        this.masterNodeRepository = masterNodeRepository;
         this.resourceRepository = resourceRepository;
     }
 
@@ -47,7 +48,7 @@ public class EnvService {
      */
     @Transactional
     public int initDefaults(Long subsystemId) {
-        SubsystemEntity subsystem = requireSubsystem(subsystemId);
+        MasterNodeEntity subsystem = requireSubsystem(subsystemId);
         int created = 0;
         for (String name : EnvEntity.DEFAULT_NAMES) {
             if (envRepository.findBySubsystemIdAndName(subsystemId, name).isEmpty()) {
@@ -63,7 +64,7 @@ public class EnvService {
      */
     @Transactional
     public EnvEntity save(Long subsystemId, String name) {
-        SubsystemEntity subsystem = requireSubsystem(subsystemId);
+        MasterNodeEntity subsystem = requireSubsystem(subsystemId);
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("环境名不能为空");
         }
@@ -75,8 +76,8 @@ public class EnvService {
         return persist(subsystem, n);
     }
 
-    /** 落库公共段：公司/领域归属取自子系统 */
-    private EnvEntity persist(SubsystemEntity subsystem, String name) {
+    /** 落库公共段：公司/领域归属取自子系统（领域 id = 子系统节点的 parentId 别名） */
+    private EnvEntity persist(MasterNodeEntity subsystem, String name) {
         EnvEntity entity = new EnvEntity();
         entity.setCompanyId(subsystem.getCompanyId());
         entity.setBizDomainId(subsystem.getBizDomainId());
@@ -85,12 +86,13 @@ public class EnvService {
         return envRepository.save(entity);
     }
 
-    /** 子系统存在性校验（环境/资源保存共用） */
-    private SubsystemEntity requireSubsystem(Long subsystemId) {
+    /** 子系统存在性校验（必须是 t_master_node 中 node_type=子系统的节点；环境/资源保存共用） */
+    private MasterNodeEntity requireSubsystem(Long subsystemId) {
         if (subsystemId == null) {
             throw new IllegalArgumentException("所属子系统不能为空");
         }
-        return subsystemRepository.findById(subsystemId)
+        return masterNodeRepository.findById(subsystemId)
+                .filter(n -> n.getNodeType().equals(MasterNodeEntity.TYPE_SUBSYSTEM))
                 .orElseThrow(() -> new IllegalArgumentException("子系统不存在: id=" + subsystemId));
     }
 

@@ -1,10 +1,8 @@
 package com.dms21.cmdbadmin.controller;
 
-import com.dms21.cmdbadmin.entity.BizDomainEntity;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.entity.ServiceGroupEntity;
-import com.dms21.cmdbadmin.entity.SubsystemEntity;
-import com.dms21.cmdbadmin.repository.BizDomainRepository;
-import com.dms21.cmdbadmin.repository.SubsystemRepository;
+import com.dms21.cmdbadmin.repository.MasterNodeRepository;
 import com.dms21.cmdbadmin.service.ServiceGroupService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,53 +27,50 @@ import java.util.stream.Collectors;
  *   GET /api/bizdomains → serviceAdmin CmdbClient（30s 缓存）拉业务领域清单，
  *                         返回 [{code, name}]，用于微服务管理页的"业务领域"编辑下拉
  *
- * 数据源即本服务 CMDB 自有表：t_subsystem / t_biz_domain（主数据统一由 cmdb 提供，
- * serviceAdmin 侧同名字典功能已删除）
+ * 数据源即本服务 CMDB 自有表：领域/子系统/模块三级合表 t_master_node（按 node_type 过滤），
+ * 主数据统一由 cmdb 提供（serviceAdmin 侧同名字典功能已删除）
  */
 @RestController
 @RequestMapping("/api")
 public class CmdbApiController {
 
-    private final SubsystemRepository subsystemRepository;
-    private final BizDomainRepository bizDomainRepository;
+    private final MasterNodeRepository masterNodeRepository;
     private final ServiceGroupService serviceGroupService;
 
-    public CmdbApiController(SubsystemRepository subsystemRepository,
-                             BizDomainRepository bizDomainRepository,
+    public CmdbApiController(MasterNodeRepository masterNodeRepository,
                              ServiceGroupService serviceGroupService) {
-        this.subsystemRepository = subsystemRepository;
-        this.bizDomainRepository = bizDomainRepository;
+        this.masterNodeRepository = masterNodeRepository;
         this.serviceGroupService = serviceGroupService;
     }
 
     /**
-     * 子系统清单（主数据在 t_subsystem）
+     * 子系统清单（主数据在 t_master_node，node_type=子系统；bizGroup 沿父链取领域的编码）
      * 示例：curl http://localhost:8091/api/subsystems
      * 返回：[{"code":"S001","name":"交易平台","bizGroup":"D001"}]，按 code 排序
      */
     @GetMapping("/subsystems")
     public List<SubsystemDto> subsystems() {
         // 领域 id → code 一次性查表换算，避免逐条查询（基于 ID 手动关联）
-        Map<Long, String> domainCodes = bizDomainRepository.findAll().stream()
-                .collect(Collectors.toMap(BizDomainEntity::getId, BizDomainEntity::getCode, (a, b) -> a));
-        return subsystemRepository.findAll().stream()
-                .sorted(Comparator.comparing(SubsystemEntity::getCode, Comparator.nullsLast(String::compareTo)))
+        Map<Long, String> domainCodes = masterNodeRepository.findByNodeType(MasterNodeEntity.TYPE_DOMAIN).stream()
+                .collect(Collectors.toMap(MasterNodeEntity::getId, MasterNodeEntity::getCode, (a, b) -> a));
+        return masterNodeRepository.findByNodeType(MasterNodeEntity.TYPE_SUBSYSTEM).stream()
+                .sorted(Comparator.comparing(MasterNodeEntity::getCode, Comparator.nullsLast(String::compareTo)))
                 .map(s -> new SubsystemDto(
                         s.getCode(),
                         s.getFullName() == null ? "" : s.getFullName(),
-                        domainCodes.getOrDefault(s.getBizDomainId(), "")))
+                        domainCodes.getOrDefault(s.getParentId(), "")))
                 .toList();
     }
 
     /**
-     * 业务领域清单（主数据在 t_biz_domain）
+     * 业务领域清单（主数据在 t_master_node，node_type=领域）
      * 示例：curl http://localhost:8091/api/bizdomains
      * 返回：[{"code":"D001","name":"交易业务域"}]，按 code 排序
      */
     @GetMapping("/bizdomains")
     public List<BizDomainDto> bizdomains() {
-        return bizDomainRepository.findAll().stream()
-                .sorted(Comparator.comparing(BizDomainEntity::getCode, Comparator.nullsLast(String::compareTo)))
+        return masterNodeRepository.findByNodeType(MasterNodeEntity.TYPE_DOMAIN).stream()
+                .sorted(Comparator.comparing(MasterNodeEntity::getCode, Comparator.nullsLast(String::compareTo)))
                 .map(d -> new BizDomainDto(d.getCode(), d.getFullName() == null ? "" : d.getFullName()))
                 .toList();
     }

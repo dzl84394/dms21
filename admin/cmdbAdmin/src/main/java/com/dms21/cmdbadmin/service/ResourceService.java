@@ -1,11 +1,11 @@
 package com.dms21.cmdbadmin.service;
 
 import com.dms21.cmdbadmin.entity.EnvEntity;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.entity.ResourceEntity;
-import com.dms21.cmdbadmin.entity.SubsystemEntity;
 import com.dms21.cmdbadmin.repository.EnvRepository;
+import com.dms21.cmdbadmin.repository.MasterNodeRepository;
 import com.dms21.cmdbadmin.repository.ResourceRepository;
-import com.dms21.cmdbadmin.repository.SubsystemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,14 +30,14 @@ public class ResourceService {
 
     private final ResourceRepository resourceRepository;
     private final EnvRepository envRepository;
-    private final SubsystemRepository subsystemRepository;
+    private final MasterNodeRepository masterNodeRepository;
 
     public ResourceService(ResourceRepository resourceRepository,
                            EnvRepository envRepository,
-                           SubsystemRepository subsystemRepository) {
+                           MasterNodeRepository masterNodeRepository) {
         this.resourceRepository = resourceRepository;
         this.envRepository = envRepository;
-        this.subsystemRepository = subsystemRepository;
+        this.masterNodeRepository = masterNodeRepository;
     }
 
     /**
@@ -110,7 +110,9 @@ public class ResourceService {
         if (subsystemId == null) {
             throw new IllegalArgumentException("所属子系统不能为空");
         }
-        SubsystemEntity subsystem = subsystemRepository.findById(subsystemId)
+        // 子系统必须是 t_master_node 中 node_type=子系统的节点
+        MasterNodeEntity subsystem = masterNodeRepository.findById(subsystemId)
+                .filter(n -> n.getNodeType().equals(MasterNodeEntity.TYPE_SUBSYSTEM))
                 .orElseThrow(() -> new IllegalArgumentException("子系统不存在: id=" + subsystemId));
         if (envId == null) {
             throw new IllegalArgumentException("所属环境不能为空");

@@ -1,8 +1,8 @@
 package com.dms21.cmdbadmin.service;
 
-import com.dms21.cmdbadmin.entity.SubsystemEntity;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.entity.VersionEntity;
-import com.dms21.cmdbadmin.repository.SubsystemRepository;
+import com.dms21.cmdbadmin.repository.MasterNodeRepository;
 import com.dms21.cmdbadmin.repository.VersionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,12 +23,12 @@ import java.util.List;
 public class VersionService {
 
     private final VersionRepository versionRepository;
-    private final SubsystemRepository subsystemRepository;
+    private final MasterNodeRepository masterNodeRepository;
 
     public VersionService(VersionRepository versionRepository,
-                          SubsystemRepository subsystemRepository) {
+                          MasterNodeRepository masterNodeRepository) {
         this.versionRepository = versionRepository;
-        this.subsystemRepository = subsystemRepository;
+        this.masterNodeRepository = masterNodeRepository;
     }
 
     /**
@@ -66,7 +66,9 @@ public class VersionService {
         if (subsystemId == null) {
             throw new IllegalArgumentException("所属子系统不能为空");
         }
-        SubsystemEntity subsystem = subsystemRepository.findById(subsystemId)
+        // 子系统必须是 t_master_node 中 node_type=子系统的节点
+        MasterNodeEntity subsystem = masterNodeRepository.findById(subsystemId)
+                .filter(n -> n.getNodeType().equals(MasterNodeEntity.TYPE_SUBSYSTEM))
                 .orElseThrow(() -> new IllegalArgumentException("子系统不存在: id=" + subsystemId));
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("版本编号不能为空");

@@ -1,9 +1,8 @@
 package com.dms21.cmdbadmin.controller;
 
-import com.dms21.cmdbadmin.entity.SubsystemEntity;
-import com.dms21.cmdbadmin.service.BizDomainService;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.service.CompanyService;
-import com.dms21.cmdbadmin.service.SubsystemService;
+import com.dms21.cmdbadmin.service.MasterNodeService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +14,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 /**
- * 子系统管理：业务领域下的系统单元（数据落 cmdbAdmin 自有库 t_subsystem）
+ * 子系统管理：业务领域下的系统单元（数据落 cmdbAdmin 自有库 t_master_node，node_type=子系统）
+ *
+ * 领域/子系统/模块三级合表存储，页面保持独立路由与表单，底层经 MasterNodeService 统一读写；
+ * 子系统专属的 8 个字段（状态/类别/等级/外购/供应商/三团队/业务属主）在实体上以普通属性
+ * 形式读写，实际落 ext JSON 列，表单模板零改动
  *
  * 路由（list / form / save / delete 四段式，与公司/业务领域管理同一模式）：
  *   GET  /admin/subsystem?companyId=&keyword=   列表页（按公司过滤 + 关键词）
@@ -25,22 +28,19 @@ import java.util.List;
  *
  * 表单里公司 → 业务领域 级联下拉：JS 按所选公司过滤领域选项（option 带 data-company），
  * 服务端保存时再校验领域归属公司，双保险。
- * 公司名/领域名显示基于 ID 手动批量查询（subsystemService.companyNames / domainNames），不用 @ManyToMany
+ * 公司名/领域名显示基于 ID 手动批量查询（masterNodeService.companyNames / domainNames），不用 @ManyToMany
  */
 @Controller
 @RequestMapping("/admin/subsystem")
 public class SubsystemController {
 
-    private final SubsystemService subsystemService;
+    private final MasterNodeService masterNodeService;
     private final CompanyService companyService;
-    private final BizDomainService bizDomainService;
 
-    public SubsystemController(SubsystemService subsystemService,
-                               CompanyService companyService,
-                               BizDomainService bizDomainService) {
-        this.subsystemService = subsystemService;
+    public SubsystemController(MasterNodeService masterNodeService,
+                               CompanyService companyService) {
+        this.masterNodeService = masterNodeService;
         this.companyService = companyService;
-        this.bizDomainService = bizDomainService;
     }
 
     /**
@@ -52,11 +52,11 @@ public class SubsystemController {
     public String list(@RequestParam(required = false) Long companyId,
                        @RequestParam(required = false, defaultValue = "") String keyword,
                        Model model) {
-        List<SubsystemEntity> items = subsystemService.search(companyId, keyword);
+        List<MasterNodeEntity> items = masterNodeService.searchSubsystems(companyId, keyword);
         model.addAttribute("items", items);
         // 公司名/领域名映射（id → 简称/全称），页面"所属公司/所属业务领域"列显示用
-        model.addAttribute("companyNames", subsystemService.companyNames(items));
-        model.addAttribute("domainNames", subsystemService.domainNames(items));
+        model.addAttribute("companyNames", masterNodeService.companyNames(items));
+        model.addAttribute("domainNames", masterNodeService.domainNames(items));
         model.addAttribute("companies", companyService.listAll()); // 过滤下拉
         model.addAttribute("companyId", companyId);
         model.addAttribute("keyword", keyword);
@@ -71,16 +71,16 @@ public class SubsystemController {
      */
     @GetMapping("/form")
     public String form(@RequestParam(required = false) Long id, Model model) {
-        if (id != null && subsystemService.findById(id) == null) {
+        if (id != null && masterNodeService.findById(id) == null) {
             return "redirect:/admin/subsystem";
         }
-        model.addAttribute("subsystem", subsystemService.findById(id)); // null=新增模式
+        model.addAttribute("subsystem", masterNodeService.findById(id)); // null=新增模式
         model.addAttribute("companies", companyService.listAll());
-        model.addAttribute("bizDomains", bizDomainService.listAll());
-        // 状态/类别/等级选项（常量定义在 SubsystemEntity）
-        model.addAttribute("statusOptions", SubsystemEntity.STATUS_OPTIONS);
-        model.addAttribute("categoryOptions", SubsystemEntity.CATEGORY_OPTIONS);
-        model.addAttribute("levelOptions", SubsystemEntity.LEVEL_OPTIONS);
+        model.addAttribute("bizDomains", masterNodeService.listAll(MasterNodeEntity.TYPE_DOMAIN));
+        // 状态/类别/等级选项（常量定义在 MasterNodeEntity）
+        model.addAttribute("statusOptions", MasterNodeEntity.STATUS_OPTIONS);
+        model.addAttribute("categoryOptions", MasterNodeEntity.CATEGORY_OPTIONS);
+        model.addAttribute("levelOptions", MasterNodeEntity.LEVEL_OPTIONS);
         return "subsystem_form";
     }
 
@@ -109,7 +109,7 @@ public class SubsystemController {
                        @RequestParam(required = false) String opsTeam,
                        @RequestParam(required = false) String bizOwner,
                        @RequestParam(required = false) String description) {
-        SubsystemEntity saved = subsystemService.save(id, companyId, bizDomainId, code,
+        MasterNodeEntity saved = masterNodeService.saveSubsystem(id, companyId, bizDomainId, code,
                 englishName, fullName, shortName, status, category, level,
                 outsourced, vendor, devTeam, opsTeam, bizOwner, description);
         return "redirect:/admin/subsystem?companyId=" + saved.getCompanyId();
@@ -122,7 +122,7 @@ public class SubsystemController {
      */
     @PostMapping("/delete/{id}")
     public String delete(@PathVariable Long id) {
-        subsystemService.delete(id);
+        masterNodeService.deleteSubsystem(id);
         return "redirect:/admin/subsystem";
     }
 }

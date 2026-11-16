@@ -1,10 +1,10 @@
 package com.dms21.cmdbadmin.controller;
 
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.entity.ResourceEntity;
-import com.dms21.cmdbadmin.service.BizDomainService;
 import com.dms21.cmdbadmin.service.CompanyService;
+import com.dms21.cmdbadmin.service.MasterNodeService;
 import com.dms21.cmdbadmin.service.ResourceService;
-import com.dms21.cmdbadmin.service.SubsystemService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,17 +34,14 @@ public class ResourceController {
 
     private final ResourceService resourceService;
     private final CompanyService companyService;
-    private final BizDomainService bizDomainService;
-    private final SubsystemService subsystemService;
+    private final MasterNodeService masterNodeService;
 
     public ResourceController(ResourceService resourceService,
                               CompanyService companyService,
-                              BizDomainService bizDomainService,
-                              SubsystemService subsystemService) {
+                              MasterNodeService masterNodeService) {
         this.resourceService = resourceService;
         this.companyService = companyService;
-        this.bizDomainService = bizDomainService;
-        this.subsystemService = subsystemService;
+        this.masterNodeService = masterNodeService;
     }
 
     /**
@@ -61,17 +58,17 @@ public class ResourceController {
         List<ResourceEntity> items = resourceService.search(subsystemId, envId, resType, keyword);
         model.addAttribute("items", items);
         // 公司名/领域名/子系统名/环境名映射，清单页"所属"各列显示用
-        model.addAttribute("companyNames", subsystemService.companyNamesByIds(
+        model.addAttribute("companyNames", masterNodeService.companyNamesByIds(
                 items.stream().map(ResourceEntity::getCompanyId).toList()));
-        model.addAttribute("domainNames", subsystemService.domainNamesByIds(
+        model.addAttribute("domainNames", masterNodeService.domainNamesByIds(
                 items.stream().map(ResourceEntity::getBizDomainId).toList()));
-        model.addAttribute("subsystemNames", subsystemService.subsystemNamesByIds(
+        model.addAttribute("subsystemNames", masterNodeService.subsystemNamesByIds(
                 items.stream().map(ResourceEntity::getSubsystemId).toList()));
         model.addAttribute("envNames", resourceService.envNames(items));
         // 过滤区下拉数据
         model.addAttribute("companies", companyService.listAll());
-        model.addAttribute("bizDomains", bizDomainService.listAll());
-        model.addAttribute("subsystems", subsystemService.listAll());
+        model.addAttribute("bizDomains", masterNodeService.listAll(MasterNodeEntity.TYPE_DOMAIN));
+        model.addAttribute("subsystems", masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM));
         model.addAttribute("envs", resourceService.listAllEnvs());
         model.addAttribute("typeOptions", ResourceEntity.TYPE_OPTIONS);
         model.addAttribute("subsystemId", subsystemId);
@@ -94,8 +91,8 @@ public class ResourceController {
         }
         model.addAttribute("resource", resourceService.findById(id)); // null=新增模式
         model.addAttribute("companies", companyService.listAll());
-        model.addAttribute("bizDomains", bizDomainService.listAll());
-        model.addAttribute("subsystems", subsystemService.listAll());
+        model.addAttribute("bizDomains", masterNodeService.listAll(MasterNodeEntity.TYPE_DOMAIN));
+        model.addAttribute("subsystems", masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM));
         model.addAttribute("envs", resourceService.listAllEnvs());
         model.addAttribute("typeOptions", ResourceEntity.TYPE_OPTIONS);
         return "resource_form";

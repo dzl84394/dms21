@@ -1,8 +1,9 @@
 package com.dms21.cmdbadmin.service;
 
 import com.dms21.cmdbadmin.entity.CompanyEntity;
+import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.repository.CompanyRepository;
-import com.dms21.cmdbadmin.repository.BizDomainRepository;
+import com.dms21.cmdbadmin.repository.MasterNodeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +24,11 @@ import java.util.List;
 public class CompanyService {
 
     private final CompanyRepository companyRepository;
-    private final BizDomainRepository bizDomainRepository;
+    private final MasterNodeRepository masterNodeRepository;
 
-    public CompanyService(CompanyRepository companyRepository, BizDomainRepository bizDomainRepository) {
+    public CompanyService(CompanyRepository companyRepository, MasterNodeRepository masterNodeRepository) {
         this.companyRepository = companyRepository;
-        this.bizDomainRepository = bizDomainRepository;
+        this.masterNodeRepository = masterNodeRepository;
     }
 
     /**
@@ -97,7 +98,10 @@ public class CompanyService {
      */
     @Transactional
     public void delete(Long id) {
-        if (bizDomainRepository.existsByCompanyId(id)) {
+        // 领域的 parent 为 null，唯一性/归属无法走 parent 查询，按 companyId 过滤领域类型判断
+        boolean hasDomains = masterNodeRepository.findByNodeType(MasterNodeEntity.TYPE_DOMAIN).stream()
+                .anyMatch(d -> d.getCompanyId().equals(id));
+        if (hasDomains) {
             throw new IllegalArgumentException("该公司下仍有业务领域，请先删除或迁移后再删除公司");
         }
         companyRepository.deleteById(id);
