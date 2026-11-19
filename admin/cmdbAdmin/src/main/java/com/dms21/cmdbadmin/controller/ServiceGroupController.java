@@ -84,8 +84,8 @@ public class ServiceGroupController {
                 masterNodeService.subsystemNamesByIds(
                         serviceGroupService.listAll().stream()
                                 .map(ServiceGroupEntity::getModuleId).toList()));
-        model.addAttribute("clusterCounts", clusterService.countByApp());
-        model.addAttribute("instanceCounts", clusterService.instanceCountByApp());
+        model.addAttribute("clusterCounts", clusterService.countByService());
+        model.addAttribute("instanceCounts", clusterService.instanceCountByService());
         // 回填查询条件
         model.addAttribute("q", q);
         model.addAttribute("subsystemId", subsystemId);

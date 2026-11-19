@@ -19,11 +19,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 集群管理：应用在某套环境的部署单元。
+ * 集群管理：微服务在某套环境的部署单元。
  *
  * 路由：
- *   GET  /admin/cluster              集群清单（可搜索、可按应用过滤）
- *   GET  /admin/cluster/form         新增集群（带 appId 时预选应用）
+ *   GET  /admin/cluster              集群清单（可搜索、可按微服务过滤）
+ *   GET  /admin/cluster/form         新增集群（带 serviceId 时预选微服务）
  *   GET  /admin/cluster/form?id=     编辑集群
  *   POST /admin/cluster/save         保存集群
  *   POST /admin/cluster/delete/{id}  删除集群
@@ -47,35 +47,35 @@ public class ServiceClusterController {
     /** 集群清单 */
     @GetMapping("/cluster")
     public String clusters(@RequestParam(required = false, defaultValue = "") String q,
-                           @RequestParam(required = false) Long appId,
+                           @RequestParam(required = false) Long serviceId,
                            Model model) {
-        List<ServiceGroupEntity> apps = businessApps();
-        List<ServiceClusterEntity> clusters = clusterService.list(q, appId);
+        List<ServiceGroupEntity> services = businessServices();
+        List<ServiceClusterEntity> clusters = clusterService.list(q, serviceId);
         model.addAttribute("clusters", clusters);
-        model.addAttribute("apps", apps);
-        model.addAttribute("appNames", apps.stream()
+        model.addAttribute("services", services);
+        model.addAttribute("serviceNames", services.stream()
                 .collect(Collectors.toMap(ServiceGroupEntity::getId, ServiceGroupEntity::getServiceName)));
         model.addAttribute("envNames", envNames());
         model.addAttribute("instanceCounts", clusterService.eurekaInstanceCounts());
         model.addAttribute("q", q);
-        model.addAttribute("appId", appId);
+        model.addAttribute("serviceId", serviceId);
         return "cluster";
     }
 
     /** 新增/编辑集群表单 */
     @GetMapping("/cluster/form")
     public String clusterForm(@RequestParam(required = false) Long id,
-                              @RequestParam(required = false) Long appId,
+                              @RequestParam(required = false) Long serviceId,
                               Model model) {
         ServiceClusterEntity cluster = id == null ? null : clusterService.findById(id);
         if (id != null && cluster == null) {
             return "redirect:/admin/cluster";
         }
         model.addAttribute("cluster", cluster);
-        model.addAttribute("apps", businessApps());
+        model.addAttribute("services", businessServices());
         model.addAttribute("envs", envService.listAll());
         model.addAttribute("eurekaInstanceCounts", clusterService.eurekaInstanceCounts());
-        model.addAttribute("selectedAppId", cluster != null ? cluster.getAppId() : appId);
+        model.addAttribute("selectedServiceId", cluster != null ? cluster.getServiceId() : serviceId);
         model.addAttribute("deployTypes", ServiceClusterEntity.DEPLOY_TYPE_OPTIONS);
         model.addAttribute("statusOptions", ServiceClusterEntity.STATUS_OPTIONS);
         // 机房/容器集群：用已有值做输入提示，避免同名写法不一致
@@ -97,7 +97,7 @@ public class ServiceClusterController {
     /** 保存集群 */
     @PostMapping("/cluster/save")
     public String saveCluster(@RequestParam(required = false) Long id,
-                              @RequestParam Long appId,
+                              @RequestParam Long serviceId,
                               @RequestParam String registryName,
                               @RequestParam(required = false) String clusterName,
                               @RequestParam(required = false) Long envId,
@@ -108,10 +108,10 @@ public class ServiceClusterController {
                               @RequestParam(required = false) Integer replicas,
                               @RequestParam(required = false) String entryUrl,
                               @RequestParam(required = false) String status) {
-        if (serviceGroupService.findServiceById(appId) == null) {
-            throw new IllegalArgumentException("应用不存在: id=" + appId);
+        if (serviceGroupService.findServiceById(serviceId) == null) {
+            throw new IllegalArgumentException("微服务不存在: id=" + serviceId);
         }
-        clusterService.upsert(id, appId, registryName, clusterName, envId, idc, k8sCluster,
+        clusterService.upsert(id, serviceId, registryName, clusterName, envId, idc, k8sCluster,
                 namespace, deployType, replicas, entryUrl, status);
         return "redirect:/admin/cluster";
     }
@@ -124,7 +124,7 @@ public class ServiceClusterController {
     }
 
     /** 只取业务服务，中间件不建集群 */
-    private List<ServiceGroupEntity> businessApps() {
+    private List<ServiceGroupEntity> businessServices() {
         return serviceGroupService.listAll().stream()
                 .filter(ServiceGroupEntity::isBizService)
                 .toList();

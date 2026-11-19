@@ -59,8 +59,8 @@ public class ServiceApplicationService {
         Set<String> codes = new TreeSet<>(servicesByApp.keySet());
         codes.addAll(saved.keySet());
 
-        Map<Long, Long> clusterCounts = clusterService.countByApp();
-        Map<Long, Integer> instanceCounts = clusterService.instanceCountByApp();
+        Map<Long, Long> clusterCounts = clusterService.countByService();
+        Map<Long, Integer> instanceCounts = clusterService.instanceCountByService();
 
         String needle = q == null ? "" : q.trim().toLowerCase();
         List<ServiceApplicationView> result = new ArrayList<>();

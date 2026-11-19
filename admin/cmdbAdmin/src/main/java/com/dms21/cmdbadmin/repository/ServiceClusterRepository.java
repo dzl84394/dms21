@@ -13,7 +13,7 @@ public interface ServiceClusterRepository extends JpaRepository<ServiceClusterEn
 
     Optional<ServiceClusterEntity> findByRegistryName(String registryName);
 
-    List<ServiceClusterEntity> findByAppIdOrderByIdAsc(Long appId);
+    List<ServiceClusterEntity> findByServiceIdOrderByIdAsc(Long serviceId);
 
     List<ServiceClusterEntity> findAllByOrderByIdAsc();
 }

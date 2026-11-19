@@ -14,10 +14,10 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * 集群管理：应用在某套环境的部署单元。
+ * 集群管理：微服务在某套环境的部署单元。
  *
  * 注册名来自 Eureka（新增时可从注册表选择），实例数为运行态数据，实时查询、不落库。
- * 集群本身不自动创建，由人工在"集群"页面新增并绑定应用。
+ * 集群本身不自动创建，由人工在"集群"页面新增并绑定微服务。
  */
 @Service
 public class ServiceClusterService {
@@ -32,14 +32,14 @@ public class ServiceClusterService {
     }
 
     /**
-     * 集群清单：按应用和关键字过滤。
-     * appId 为空查全部；关键字匹配注册名、集群名、机房、容器集群。
+     * 集群清单：按微服务和关键字过滤。
+     * serviceId 为空查全部；关键字匹配注册名、集群名、机房、容器集群。
      */
-    public List<ServiceClusterEntity> list(String q, Long appId) {
+    public List<ServiceClusterEntity> list(String q, Long serviceId) {
         String needle = q == null ? "" : q.trim().toLowerCase();
         List<ServiceClusterEntity> list = new ArrayList<>();
         for (ServiceClusterEntity c : repository.findAllByOrderByIdAsc()) {
-            if (appId != null && !appId.equals(c.getAppId())) {
+            if (serviceId != null && !serviceId.equals(c.getServiceId())) {
                 continue;
             }
             if (!needle.isEmpty()) {
@@ -57,8 +57,8 @@ public class ServiceClusterService {
         return list;
     }
 
-    public List<ServiceClusterEntity> listByApp(Long appId) {
-        return appId == null ? List.of() : repository.findByAppIdOrderByIdAsc(appId);
+    public List<ServiceClusterEntity> listByService(Long serviceId) {
+        return serviceId == null ? List.of() : repository.findByServiceIdOrderByIdAsc(serviceId);
     }
 
     public ServiceClusterEntity findById(Long id) {
@@ -70,11 +70,11 @@ public class ServiceClusterService {
      * 注册名全局唯一；集群名留空时默认 default；状态留空默认"在运"。
      */
     @Transactional
-    public ServiceClusterEntity upsert(Long id, Long appId, String registryName, String clusterName,
+    public ServiceClusterEntity upsert(Long id, Long serviceId, String registryName, String clusterName,
                                        Long envId, String idc, String k8sCluster, String namespace,
                                        String deployType, Integer replicas, String entryUrl, String status) {
-        if (appId == null) {
-            throw new IllegalArgumentException("所属应用不能为空");
+        if (serviceId == null) {
+            throw new IllegalArgumentException("所属微服务不能为空");
         }
         String name = normalize(registryName);
         if (name.isEmpty()) {
@@ -89,7 +89,7 @@ public class ServiceClusterService {
                 ? new ServiceClusterEntity()
                 : repository.findById(id).orElseThrow(() -> new IllegalArgumentException("集群不存在: id=" + id));
 
-        entity.setAppId(appId);
+        entity.setServiceId(serviceId);
         entity.setRegistryName(name);
         entity.setClusterName(blankToDefault(clusterName, "default"));
         entity.setEnvId(envId);
@@ -111,11 +111,11 @@ public class ServiceClusterService {
         repository.deleteById(id);
     }
 
-    /** 应用 id → 集群数（应用列表用） */
-    public Map<Long, Long> countByApp() {
+    /** 微服务 id → 集群数（微服务列表用） */
+    public Map<Long, Long> countByService() {
         Map<Long, Long> counts = new LinkedHashMap<>();
         for (ServiceClusterEntity c : repository.findAllByOrderByIdAsc()) {
-            counts.merge(c.getAppId(), 1L, Long::sum);
+            counts.merge(c.getServiceId(), 1L, Long::sum);
         }
         return counts;
     }
@@ -136,12 +136,12 @@ public class ServiceClusterService {
         return counts;
     }
 
-    /** 应用 id → 在线实例数（应用列表用） */
-    public Map<Long, Integer> instanceCountByApp() {
+    /** 微服务 id → 在线实例数（微服务列表用） */
+    public Map<Long, Integer> instanceCountByService() {
         Map<String, Integer> byRegistry = eurekaInstanceCounts();
         Map<Long, Integer> counts = new LinkedHashMap<>();
         for (ServiceClusterEntity c : repository.findAllByOrderByIdAsc()) {
-            counts.merge(c.getAppId(), byRegistry.getOrDefault(c.getRegistryName(), 0), Integer::sum);
+            counts.merge(c.getServiceId(), byRegistry.getOrDefault(c.getRegistryName(), 0), Integer::sum);
         }
         return counts;
     }

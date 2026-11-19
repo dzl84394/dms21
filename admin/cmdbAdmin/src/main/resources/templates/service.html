@@ -78,7 +78,7 @@
         <td class="muted" th:text="${g.updatedAt != null} ? ${#temporals.format(g.updatedAt, 'MM-dd HH:mm')} : '-'">09-15 10:00</td>
         <td>
             <a th:href="@{'/admin/service/form?id=' + ${g.id}}">编辑</a>
-            <a th:href="@{'/admin/cluster?appId=' + ${g.id}}" style="margin-left:8px;">集群</a>
+            <a th:href="@{'/admin/cluster?serviceId=' + ${g.id}}" style="margin-left:8px;">集群</a>
             <form method="post" th:action="@{'/admin/service/delete/' + ${g.id}}"
                   style="display:inline;margin-left:8px;">
                 <button type="submit" class="del" style="padding:2px 8px;font-size:12px;">删除</button>

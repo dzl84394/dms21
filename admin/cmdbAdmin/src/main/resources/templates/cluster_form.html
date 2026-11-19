@@ -20,12 +20,12 @@
             <tr>
                 <td style="width:140px;">所属微服务 <span style="color:#ff4757;">*</span></td>
                 <td>
-                    <select name="appId" required style="width:320px;">
+                    <select name="serviceId" required style="width:320px;">
                         <option value="">请选择微服务</option>
-                        <option th:each="a : ${apps}" th:value="${a.id}"
+                        <option th:each="a : ${services}" th:value="${a.id}"
                                 th:attr="data-subsystem=${a.subsystemId}"
                                 th:text="${a.serviceName + (a.serviceNameCn != null and !a.serviceNameCn.isEmpty() ? '·' + a.serviceNameCn : '')}"
-                                th:selected="${selectedAppId != null and selectedAppId == a.id}">order-center·订单中心</option>
+                                th:selected="${selectedServiceId != null and selectedServiceId == a.id}">order-center·订单中心</option>
                     </select>
                     <a th:href="@{/admin/service/form}" style="margin-left:10px;font-size:12px;">新建微服务</a>
                 </td>
@@ -168,7 +168,7 @@
 
 <script>
     (function () {
-        var appSel = document.querySelector('select[name="appId"]');
+        var appSel = document.querySelector('select[name="serviceId"]');
         var envSel = document.querySelector('select[name="envId"]');
         if (!appSel || !envSel) return;
 

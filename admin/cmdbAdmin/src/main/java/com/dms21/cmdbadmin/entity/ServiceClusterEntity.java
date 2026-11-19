@@ -31,9 +31,9 @@ public class ServiceClusterEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 所属应用 id（t_service_group 主键） */
+    /** 所属微服务 id（t_service_group 主键）；历史列名为 app_id，保留列名避免数据迁移丢失 */
     @Column(name = "app_id", nullable = false)
-    private Long appId;
+    private Long serviceId;
 
     /** Eureka 注册名（spring.application.name），全局唯一 */
     @Column(name = "registry_name", unique = true, nullable = false, length = 128)
@@ -109,12 +109,12 @@ public class ServiceClusterEntity {
         this.id = id;
     }
 
-    public Long getAppId() {
-        return appId;
+    public Long getServiceId() {
+        return serviceId;
     }
 
-    public void setAppId(Long appId) {
-        this.appId = appId;
+    public void setServiceId(Long serviceId) {
+        this.serviceId = serviceId;
     }
 
     public String getRegistryName() {

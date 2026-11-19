@@ -13,14 +13,14 @@
 
 <form method="get" action="/admin/cluster" class="toolbar">
     <input type="text" name="q" th:value="${q}" placeholder="搜注册名 / 集群名 / 机房 / 容器集群" style="width:280px;">
-    <select name="appId">
+    <select name="serviceId">
         <option value="">全部微服务</option>
-        <option th:each="a : ${apps}" th:value="${a.id}"
+        <option th:each="a : ${services}" th:value="${a.id}"
                 th:text="${a.serviceName + (a.serviceNameCn != null and !a.serviceNameCn.isEmpty() ? '·' + a.serviceNameCn : '')}"
-                th:selected="${appId != null and appId == a.id}">order-center·订单中心</option>
+                th:selected="${serviceId != null and serviceId == a.id}">order-center·订单中心</option>
     </select>
     <button type="submit">搜索</button>
-    <a th:href="@{/admin/cluster}" th:if="${q != '' or appId != null}" style="color:#3742fa;">清除条件</a>
+    <a th:href="@{/admin/cluster}" th:if="${q != '' or serviceId != null}" style="color:#3742fa;">清除条件</a>
     <a th:href="@{/admin/cluster/form}" style="margin-left:auto;background:#3742fa;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;">+ 添加集群</a>
 </form>
 
@@ -45,7 +45,7 @@
         <td colspan="11" class="muted">还没有集群，点击右上角“添加集群”创建</td>
     </tr>
     <tr th:each="c : ${clusters}">
-        <td th:text="${appNames[c.appId] ?: ('微服务已删除#' + c.appId)}">order-center-api</td>
+        <td th:text="${serviceNames[c.serviceId] ?: ('微服务已删除#' + c.serviceId)}">order-center-api</td>
         <td th:text="${c.registryName}">order-center-dev1</td>
         <td th:text="${c.clusterName}">dev1</td>
         <td th:text="${c.envId != null ? (envNames[c.envId] ?: '-') : '-'}">DEV</td>
