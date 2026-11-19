@@ -42,6 +42,15 @@ public class EnvService {
         return subsystemId == null ? List.of() : envRepository.findBySubsystemIdOrderByIdAsc(subsystemId);
     }
 
+    /** 全部环境（集群表单使用：按子系统在前端过滤，避免逐个子系统查询） */
+    public List<EnvEntity> listAll() {
+        List<EnvEntity> list = envRepository.findAll();
+        list.sort(java.util.Comparator
+                .comparing(EnvEntity::getSubsystemId, java.util.Comparator.nullsLast(Long::compareTo))
+                .thenComparing(EnvEntity::getId));
+        return list;
+    }
+
     /**
      * 一键初始化默认环境 DEV/STG/UAT/PROD（幂等：按名查重，已存在的跳过）
      * 返回实际新建的环境数量（页面可提示"已存在 N 个，跳过"）

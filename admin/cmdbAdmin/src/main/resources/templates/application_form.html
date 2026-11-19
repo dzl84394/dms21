@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('应用编辑', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('application')}"></div>
+
+<main class="content">
+<h1 th:text="${codeLocked ? '维护应用 — ' + app.appCode : '新增应用'}">新增应用</h1>
+<p class="desc">
+    应用编码由注册名清洗得到（去掉 dev1 / stg1 / prd 等环境后缀），创建后不可修改。
+    微服务、集群和实例在各自页面维护，这里只维护应用自身属性。
+</p>
+
+<div class="card">
+    <form method="post" action="/admin/application/save">
+        <input type="hidden" name="id" th:if="${app.id != null}" th:value="${app.id}">
+
+        <table>
+            <tbody>
+            <tr>
+                <td style="width:140px;">应用编码 <span style="color:#ff4757;">*</span></td>
+                <td>
+                    <input th:if="${codeLocked}" type="text" name="appCode"
+                           th:value="${app.appCode}" readonly style="width:320px;background:#f5f5f5;">
+                    <input th:if="${!codeLocked}" type="text" name="appCode"
+                           th:value="${app.appCode}" required
+                           placeholder="去掉环境后缀，如 order-center" style="width:320px;">
+                    <span class="muted" style="margin-left:8px;font-size:12px;"
+                          th:if="${codeLocked}">创建后不可修改</span>
+                </td>
+            </tr>
+            <tr>
+                <td>中文名称</td>
+                <td><input type="text" name="nameCn" maxlength="128" placeholder="如 订单中心"
+                           th:value="${app.nameCn}" style="width:280px;"></td>
+            </tr>
+            <tr>
+                <td>中文说明</td>
+                <td><textarea name="description" rows="4" maxlength="512"
+                              placeholder="应用职责、边界" style="width:480px;"
+                              th:text="${app.description}"></textarea></td>
+            </tr>
+            <tr>
+                <td>业务模块</td>
+                <td>
+                    <select name="moduleId" style="width:320px;">
+                        <option value="">（不挂模块）</option>
+                        <option th:each="m : ${modules}" th:value="${m.id}"
+                                th:attr="data-subsystem=${m.parentId}" th:text="${m.fullName}"
+                                th:selected="${app.moduleId != null and app.moduleId == m.id}">订单模块</option>
+                    </select>
+                    <span class="muted" style="margin-left:8px;font-size:12px;">选择模块后子系统自动跟随</span>
+                </td>
+            </tr>
+            <tr>
+                <td>所属子系统</td>
+                <td>
+                    <select name="subsystemId" style="width:320px;">
+                        <option value="">（不挂子系统）</option>
+                        <option th:each="s : ${subsystems}" th:value="${s.id}"
+                                th:text="${s.code + (s.shortName != null and !s.shortName.isEmpty() ? '·' + s.shortName : '')}"
+                                th:selected="${app.subsystemId != null and app.subsystemId == s.id}">S001·交易平台</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>代码库地址</td>
+                <td><input type="text" name="repoUrl" maxlength="500"
+                           th:value="${app.repoUrl}"
+                           placeholder="如 git@gitlab.dms21.com:trade/order-center.git" style="width:480px;"></td>
+            </tr>
+            <tr>
+                <td>默认分支</td>
+                <td><input type="text" name="repoBranch" maxlength="128"
+                           th:value="${app.repoBranch}" placeholder="如 main / release" style="width:200px;"></td>
+            </tr>
+            <tr>
+                <td>技术负责人</td>
+                <td><input type="text" name="techOwner" th:value="${app.techOwner}" style="width:160px;"></td>
+            </tr>
+            <tr>
+                <td>业务负责人</td>
+                <td><input type="text" name="bizOwner" th:value="${app.bizOwner}" style="width:160px;"></td>
+            </tr>
+            <tr>
+                <td>运维负责人</td>
+                <td><input type="text" name="opsOwner" th:value="${app.opsOwner}" style="width:160px;"></td>
+            </tr>
+            <tr th:if="${app.id == null}">
+                <td>确认固定</td>
+                <td>
+                    <label style="font-size:13px;">
+                        <input type="checkbox" name="confirm" value="true" style="vertical-align:middle;">
+                        保存后标记为已固定（不再显示待确认）
+                    </label>
+                </td>
+            </tr>
+            <tr>
+                <td>状态</td>
+                <td>
+                    <span class="badge warn" th:if="${app.id == null}">待确认（尚未维护）</span>
+                    <span class="badge" th:if="${app.id != null}"
+                          th:classappend="${app.confirmed} ? 'ok' : 'warn'"
+                          th:text="${app.confirmed} ? '已固定' : '待确认'">待确认</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:12px;">
+            <button type="submit">保存</button>
+            <button type="submit" th:if="${app.id != null and !app.confirmed}"
+                    th:formaction="@{/admin/application/save(confirm=true)}"
+                    style="margin-left:8px;">保存并确认固定</button>
+            <a th:href="@{/admin/application}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+</main>
+
+<script>
+    (function () {
+        var moduleSel = document.querySelector('select[name="moduleId"]');
+        var subsystemSel = document.querySelector('select[name="subsystemId"]');
+        if (!moduleSel || !subsystemSel) return;
+        function syncSubsystem() {
+            var opt = moduleSel.options[moduleSel.selectedIndex];
+            var subsystem = opt ? opt.getAttribute('data-subsystem') : null;
+            if (subsystem) {
+                subsystemSel.value = subsystem;
+                subsystemSel.disabled = true;
+            } else {
+                subsystemSel.disabled = false;
+            }
+        }
+        moduleSel.addEventListener('change', syncSubsystem);
+        syncSubsystem();
+    })();
+</script>
+
+</body>
+</html>

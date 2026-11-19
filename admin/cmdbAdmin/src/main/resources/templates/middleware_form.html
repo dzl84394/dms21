@@ -22,8 +22,9 @@
             <tr>
                 <td>名称（唯一）</td>
                 <td>
-                    <!-- 编辑模式名称只读展示（唯一键不允许改）；新增模式输入 -->
+                    <!-- 编辑模式名称只读展示（唯一键不允许改），用隐藏域把名称带回后端 -->
                     <b th:if="${mw != null}" th:text="${mw.serviceName}">mysql-prod</b>
+                    <input th:if="${mw != null}" type="hidden" name="serviceName" th:value="${mw.serviceName}">
                     <input th:if="${mw == null}" type="text" name="serviceName" required
                            placeholder="如 mysql-prod" style="width:240px;">
                 </td>

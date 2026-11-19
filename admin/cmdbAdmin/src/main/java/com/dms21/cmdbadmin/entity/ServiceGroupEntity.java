@@ -32,13 +32,14 @@ import java.util.Map;
  * 数据有两个来源：
  *   1. Eureka 自动同步：service_name 不存在的新服务自动补进来（category=业务服务，confirmed=false 待确认），
  *      同步时按 Eureka metadata 的 subsystem 编码匹配 t_subsystem 挂到子系统下，匹配不到置 null
- *   2. 人工维护：页面上补中文说明、选子系统、填负责人 → 点"确认固定"（confirmed=true 后同步不再覆盖人工值）
+ *   2. 人工维护：页面上补中文名称、中文说明、选子系统、填负责人 → 点"确认固定"（confirmed=true 后同步不再覆盖人工值）
  *
  * subsystem_id 基于 ID 手动关联（不用 @ManyToMany），子系统删除前置校验"下有服务时禁止删除"
  *
  * 示例：
  *   ServiceGroupEntity e = new ServiceGroupEntity();
- *   e.setServiceName("service-a"); e.setServiceNameCn("服务A-订单中心");
+ *   e.setServiceName("service-a"); e.setServiceNameCn("订单中心");
+ *   e.setDescription("负责订单全生命周期管理");
  *   e.setSubsystemId(1L); e.setCategory(ServiceGroupEntity.CATEGORY_BIZ);
  *   e.setTechOwner("张三"); e.setConfirmed(true);
  */
@@ -110,13 +111,33 @@ public class ServiceGroupEntity {
     @Column(name = "service_name", unique = true, nullable = false, length = 128)
     private String serviceName;
 
-    /** 微服务中文说明（人工编辑），如 "服务A-订单中心"；空表示还没人填 */
+    /** 微服务/中间件中文名称（人工编辑），如 "订单中心"；空表示还没人填 */
     @Column(name = "service_name_cn", length = 128)
     private String serviceNameCn;
+
+    /** 微服务中文说明（人工编辑），用于补充服务职责、用途等信息 */
+    @Column(name = "description", length = 512)
+    private String description;
+
+    /** 应用编码：Eureka 注册名清洗掉环境后缀后的名字（如 order-center-dev1 → order-center） */
+    @Column(name = "app_code", length = 128)
+    private String appCode;
+
+    /** 所属业务模块 id（t_master_node 中 node_type=模块；null=自身即模块，1:1 场景） */
+    @Column(name = "module_id")
+    private Long moduleId;
 
     /** 所属子系统 id（t_subsystem 主键，手动关联；null=未挂子系统，中间件一般留空） */
     @Column(name = "subsystem_id")
     private Long subsystemId;
+
+    /** 代码库地址（应用层属性），如 git@gitlab.dms21.com:trade/order-center.git */
+    @Column(name = "repo_url", length = 500)
+    private String repoUrl;
+
+    /** 默认分支，如 main / release */
+    @Column(name = "repo_branch", length = 128)
+    private String repoBranch;
 
     /** 类别-大类：同一张表同时承载"微服务"和"中间件"，靠大类区分页面归属；历史数据该列为 null 按业务服务理解 */
     @Column(name = "category", length = 32,
@@ -198,12 +219,52 @@ public class ServiceGroupEntity {
         this.serviceNameCn = serviceNameCn;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getAppCode() {
+        return appCode;
+    }
+
+    public void setAppCode(String appCode) {
+        this.appCode = appCode;
+    }
+
+    public Long getModuleId() {
+        return moduleId;
+    }
+
+    public void setModuleId(Long moduleId) {
+        this.moduleId = moduleId;
+    }
+
     public Long getSubsystemId() {
         return subsystemId;
     }
 
     public void setSubsystemId(Long subsystemId) {
         this.subsystemId = subsystemId;
+    }
+
+    public String getRepoUrl() {
+        return repoUrl;
+    }
+
+    public void setRepoUrl(String repoUrl) {
+        this.repoUrl = repoUrl;
+    }
+
+    public String getRepoBranch() {
+        return repoBranch;
+    }
+
+    public void setRepoBranch(String repoBranch) {
+        this.repoBranch = repoBranch;
     }
 
     public String getCategory() {

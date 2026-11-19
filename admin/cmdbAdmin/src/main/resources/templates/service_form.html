@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('应用编辑', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('service')}"></div>
+
+<main class="content">
+<h1 th:text="${svc == null ? '新增微服务' : '编辑微服务 — ' + svc.serviceName}">新增微服务</h1>
+<p class="desc">
+    微服务是 Eureka 中的服务单元。集群、环境和实例在“集群”页面维护，这里只维护微服务自身属性。
+    服务名可以从 Eureka 注册名中选择，也可以手工填写（如 order-center-api）。
+</p>
+
+<div class="card">
+    <form method="post" action="/admin/service/save">
+        <input type="hidden" name="id" th:if="${svc != null}" th:value="${svc.id}">
+
+        <table>
+            <tbody>
+            <tr>
+                <td style="width:140px;">微服务名称 <span style="color:#ff4757;">*</span></td>
+                <td>
+                    <input th:if="${svc != null}" type="text" name="serviceName"
+                           th:value="${svc.serviceName}" readonly
+                           style="width:320px;background:#f5f5f5;">
+                    <input th:if="${svc == null}" type="text" name="serviceName" list="eurekaNames"
+                           placeholder="从 Eureka 选择或手工输入，如 order-center-api" required
+                           style="width:320px;">
+                    <datalist id="eurekaNames">
+                        <option th:each="e : ${eurekaInstanceCounts}" th:value="${e.key}"
+                                th:text="${e.key + '（' + e.value + ' 个实例）'}">order-center-dev1（2 个实例）</option>
+                    </datalist>
+                    <span class="muted" style="margin-left:8px;font-size:12px;" th:if="${svc != null}">创建后不可修改</span>
+                </td>
+            </tr>
+            <tr th:if="${svc != null}">
+                <td>所属应用</td>
+                <td>
+                    <input type="text" th:value="${svc.appCode}" readonly
+                           style="width:320px;background:#f5f5f5;">
+                    <a th:if="${svc.appCode != null and !svc.appCode.isEmpty()}"
+                       th:href="@{'/admin/application/form?code=' + ${svc.appCode}}"
+                       style="margin-left:10px;font-size:12px;">维护应用</a>
+                    <span class="muted" style="margin-left:8px;font-size:12px;">由注册名清洗得到</span>
+                </td>
+            </tr>
+            <tr>
+                <td>中文名称</td>
+                <td>
+                    <input type="text" name="serviceNameCn" maxlength="128" placeholder="如 订单中心"
+                           th:value="${svc != null ? svc.serviceNameCn : ''}" style="width:280px;">
+                </td>
+            </tr>
+            <tr>
+                <td>中文说明</td>
+                <td>
+                    <textarea name="description" rows="4" maxlength="512"
+                              placeholder="补充应用职责、边界等信息" style="width:480px;"
+                              th:text="${svc != null ? svc.description : ''}"></textarea>
+                </td>
+            </tr>
+            <tr>
+                <td>业务模块</td>
+                <td>
+                    <select name="moduleId" style="width:320px;">
+                        <option value="">（不挂模块，自身即模块）</option>
+                        <option th:each="m : ${modules}" th:value="${m.id}"
+                                th:attr="data-subsystem=${m.parentId}"
+                                th:text="${m.fullName}"
+                                th:selected="${svc != null and svc.moduleId != null and svc.moduleId == m.id}">订单模块</option>
+                    </select>
+                    <span class="muted" style="margin-left:8px;font-size:12px;">选择模块后子系统自动跟随</span>
+                </td>
+            </tr>
+            <tr>
+                <td>所属子系统</td>
+                <td>
+                    <select name="subsystemId" style="width:320px;">
+                        <option value="" th:selected="${svc == null or svc.subsystemId == null}">（不挂子系统）</option>
+                        <option th:each="s : ${subsystems}" th:value="${s.id}"
+                                th:text="${s.code + (s.shortName != null and !s.shortName.isEmpty() ? '·' + s.shortName : (s.fullName != null ? '·' + s.fullName : ''))}"
+                                th:selected="${svc != null and svc.subsystemId != null and svc.subsystemId == s.id}">S001·交易平台</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>代码库地址</td>
+                <td>
+                    <input type="text" name="repoUrl" maxlength="500"
+                           th:value="${svc != null ? svc.repoUrl : ''}"
+                           placeholder="如 git@gitlab.dms21.com:trade/order-center.git" style="width:480px;">
+                </td>
+            </tr>
+            <tr>
+                <td>默认分支</td>
+                <td>
+                    <input type="text" name="repoBranch" maxlength="128"
+                           th:value="${svc != null ? svc.repoBranch : ''}"
+                           placeholder="如 main / release" style="width:200px;">
+                </td>
+            </tr>
+            <tr>
+                <td>技术负责人</td>
+                <td><input type="text" name="techOwner"
+                           th:value="${svc != null ? svc.techOwner : ''}"
+                           placeholder="如 张三" style="width:160px;"></td>
+            </tr>
+            <tr>
+                <td>业务负责人</td>
+                <td><input type="text" name="bizOwner"
+                           th:value="${svc != null ? svc.bizOwner : ''}"
+                           placeholder="如 李四" style="width:160px;"></td>
+            </tr>
+            <tr>
+                <td>运维负责人</td>
+                <td><input type="text" name="opsOwner"
+                           th:value="${svc != null ? svc.opsOwner : ''}"
+                           placeholder="如 王五" style="width:160px;"></td>
+            </tr>
+            <tr th:if="${svc == null}">
+                <td>确认固定</td>
+                <td>
+                    <label style="font-size:13px;">
+                        <input type="checkbox" name="confirm" value="true" style="vertical-align:middle;">
+                        创建后直接标记为已固定（同步不再覆盖）
+                    </label>
+                </td>
+            </tr>
+            <tr>
+                <td>状态</td>
+                <td>
+                    <span th:if="${svc == null}" class="badge warn">新增后为待确认</span>
+                    <span th:if="${svc != null}" class="badge"
+                          th:classappend="${svc.isConfirmed()} ? 'ok' : 'warn'"
+                          th:text="${svc.isConfirmed()} ? '已固定' : '待确认'">待确认</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:12px;">
+            <button type="submit">保存</button>
+            <button type="submit" th:if="${svc != null and !svc.isConfirmed()}"
+                    th:formaction="@{/admin/service/save(confirm=true)}"
+                    style="margin-left:8px;">保存并确认固定</button>
+            <a th:href="@{/admin/service}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+</main>
+
+<script>
+    (function () {
+        var moduleSel = document.querySelector('select[name="moduleId"]');
+        var subsystemSel = document.querySelector('select[name="subsystemId"]');
+        if (!moduleSel || !subsystemSel) return;
+        function syncSubsystem() {
+            var opt = moduleSel.options[moduleSel.selectedIndex];
+            var subsystem = opt ? opt.getAttribute('data-subsystem') : null;
+            if (subsystem) {
+                subsystemSel.value = subsystem;
+                subsystemSel.disabled = true;
+            } else {
+                subsystemSel.disabled = false;
+            }
+        }
+        moduleSel.addEventListener('change', syncSubsystem);
+        syncSubsystem();
+    })();
+</script>
+
+</body>
+</html>

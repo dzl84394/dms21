@@ -3,6 +3,7 @@ package com.dms21.cmdbadmin.service;
 import com.dms21.cmdbadmin.entity.ServiceGroupEntity;
 import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.repository.ServiceGroupRepository;
+import com.dms21.cmdbadmin.util.ApplicationNames;
 import com.dms21.cmdbadmin.repository.MasterNodeRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,9 +30,9 @@ import java.util.Map;
  *
  * 示例：
  *   serviceGroupService.syncFromRegistry();  // 新服务自动入库
- *   serviceGroupService.upsert(null, "service-a", "服务A", 1L,
+ *   serviceGroupService.upsert(null, "service-a", "订单中心", "订单全生命周期管理", 1L,
  *           "张三", "李四", "王五", false, null, null); // 新增/修改微服务
- *   serviceGroupService.upsert(null, "mysql-prod", "生产MySQL", null,
+ *   serviceGroupService.upsert(null, "mysql-prod", "生产MySQL", null, null,
  *           "张三", "李四", "王五", false, "数据库", "MySQL"); // 新增中间件
  */
 @Service
@@ -65,7 +66,7 @@ public class ServiceGroupService {
      *
      * 排序：待确认的排前面（优先处理），同状态按入库顺序
      *
-     * @param q           关键字，模糊匹配服务名或中文说明（忽略大小写）；空串=不过滤
+     * @param q           关键字，模糊匹配应用名称、中文名称或中文说明（忽略大小写）；空串=不过滤
      * @param subsystemId 子系统 id 过滤；特殊值 0 表示只看未挂子系统；null=不过滤
      * @param status      "pending"=只看待确认 / "confirmed"=只看已固定 / 其他=全部
      * @param category    类别过滤："business"=只看业务服务（微服务页）/ "middleware"=只看中间件（大类≠业务服务）
@@ -95,11 +96,13 @@ public class ServiceGroupService {
             if (categoryExact && category != null && !category.equals(e.getCategory())) {
                 continue;
             }
-            // 关键字：服务名或中文说明包含
+            // 关键字：应用名称、中文名称或中文说明包含
             if (!needle.isEmpty()
                     && !e.getServiceName().toLowerCase().contains(needle)
                     && (e.getServiceNameCn() == null
-                        || !e.getServiceNameCn().toLowerCase().contains(needle))) {
+                        || !e.getServiceNameCn().toLowerCase().contains(needle))
+                    && (e.getDescription() == null
+                        || !e.getDescription().toLowerCase().contains(needle))) {
                 continue;
             }
             // 子系统：0=只看未挂（subsystem_id 为 null），其他按 id 相等匹配
@@ -154,9 +157,8 @@ public class ServiceGroupService {
      * 把 Eureka 注册表里的新服务同步入库（幂等：已入库的跳过，绝不覆盖人工改过的值）
      * 打开管理页/调 /api/nodes 时调用一次，实现"服务上线后自动出现在管理列表"
      *
-     * 新服务的子系统归属按 Eureka metadata 的 subsystem 编码匹配 t_subsystem，
-     * 匹配不到置 null（页面上可人工补挂）；已入库记录只同步子系统归属（编码变了重新匹配），
-     * serviceNameCn/负责人/confirmed 等人工字段不碰
+     * 新服务的子系统归属按 Eureka metadata 的 subsystem 编码匹配 t_subsystem，匹配不到置 null。
+     * 已入库记录的所有字段均保留，避免打开列表页时覆盖人工维护的子系统、中文名称、负责人等数据。
      */
     @Transactional
     public void syncFromRegistry() {
@@ -178,21 +180,38 @@ public class ServiceGroupService {
             }
             Long subsystemId = subsystemCode.isEmpty() ? null : subsystemIdByCode.get(subsystemCode);
 
-            // 已入库 → 只同步子系统归属（编码变了重新匹配）；人工字段不碰
+            // 已入库 → 完整保留库内数据，尤其不能用 Eureka metadata 覆盖人工保存的子系统
             var existing = repository.findByServiceName(name);
             if (existing.isPresent()) {
-                ServiceGroupEntity e = existing.get();
-                e.setSubsystemId(subsystemId);
-                repository.save(e);
+                // 老数据补应用编码（只补空值，不覆盖人工结果）
+                ServiceGroupEntity entity = existing.get();
+                if (entity.getAppCode() == null || entity.getAppCode().isBlank()) {
+                    entity.setAppCode(ApplicationNames.clean(name));
+                    repository.save(entity);
+                }
                 continue;
             }
 
             // 新服务 → 入库（普通微服务，大类固定为"业务服务"；小类留空）
             ServiceGroupEntity entity = new ServiceGroupEntity();
             entity.setServiceName(name);
+            entity.setAppCode(ApplicationNames.clean(name));
             entity.setSubsystemId(subsystemId);
             entity.setCategory(ServiceGroupEntity.CATEGORY_BIZ);
             repository.save(entity);
+        }
+    }
+
+    /**
+     * 老数据补应用编码：按注册名清洗。只补空值，不覆盖人工维护的应用归属。
+     */
+    @Transactional
+    public void backfillAppCodes() {
+        for (ServiceGroupEntity entity : repository.findAll()) {
+            if (entity.getAppCode() == null || entity.getAppCode().isBlank()) {
+                entity.setAppCode(ApplicationNames.clean(entity.getServiceName()));
+                repository.save(entity);
+            }
         }
     }
 
@@ -202,20 +221,21 @@ public class ServiceGroupService {
      *   id 非空 → 按主键更新
      *   confirm=true → 同时把该记录标记为"固定微服务"（编辑完点确认的场景）
      *   三类负责人留空即清空
+     *   description：null=不修改（中间件表单不含该字段）；空串=清空中文说明
      *   category/subCategory：null=不修改（微服务管理页的编辑表单不含类别字段，
      *   传 null 保护既有类别不被清掉）；非 null=设置为新值（中间件表单始终提交）
      *
      * 示例：
-     *   upsert(null, "service-a", "服务A-订单中心", 1L,
+     *   upsert(null, "service-a", "订单中心", "订单全生命周期管理", 1L,
      *          "张三", "李四", "王五", false, null, null)  // 新增微服务（暂不确认），类别不动
-     *   upsert(1L, "service-a", "服务A-订单中心", 1L,
+     *   upsert(1L, "service-a", "订单中心", "订单全生命周期管理", 1L,
      *          "张三", "李四", "王五", true, null, null)   // 编辑并确认固定
-     *   upsert(null, "mysql-prod", "生产 MySQL 集群", null,
+     *   upsert(null, "mysql-prod", "生产 MySQL 集群", null, null,
      *          "张三", "李四", "王五", false, "数据库", "MySQL") // 新增中间件
      */
     @Transactional
     public ServiceGroupEntity upsert(Long id, String serviceName, String serviceNameCn,
-                                     Long subsystemId,
+                                     String description, Long subsystemId,
                                      String techOwner, String bizOwner, String opsOwner,
                                      boolean confirm, String category, String subCategory) {
         ServiceGroupEntity entity;
@@ -232,7 +252,15 @@ public class ServiceGroupService {
             entity = repository.findByServiceName(normalized).orElseGet(ServiceGroupEntity::new);
             entity.setServiceName(normalized);
         }
+        if (entity.getAppCode() == null || entity.getAppCode().isBlank()) {
+            // 应用编码由注册名清洗得到：order-center-dev1 → order-center
+            entity.setAppCode(ApplicationNames.clean(entity.getServiceName()));
+        }
         entity.setServiceNameCn(trimToEmpty(serviceNameCn));
+        if (description != null) {
+            // 微服务表单留空即清空；中间件表单不传该字段（null），保持原值
+            entity.setDescription(trimToEmpty(description));
+        }
         entity.setSubsystemId(subsystemId);
         entity.setTechOwner(trimToEmpty(techOwner));
         entity.setBizOwner(trimToEmpty(bizOwner));
@@ -250,6 +278,24 @@ public class ServiceGroupService {
             // 人工确认 → 固定为正式微服务（之后 sync 也绝不会覆盖这条记录）
             entity.setConfirmed(true);
         }
+        return repository.save(entity);
+    }
+
+    /**
+     * 保存应用（应用层属性）：在通用 upsert 基础上补业务模块和代码库信息。
+     * moduleId 为空表示"自身即模块"（1:1），不强制建模块记录。
+     */
+    @Transactional
+    public ServiceGroupEntity saveApplication(Long id, String serviceName, String serviceNameCn,
+                                              String description, Long moduleId, Long subsystemId,
+                                              String repoUrl, String repoBranch,
+                                              String techOwner, String bizOwner, String opsOwner,
+                                              boolean confirm) {
+        ServiceGroupEntity entity = upsert(id, serviceName, serviceNameCn, description, subsystemId,
+                techOwner, bizOwner, opsOwner, confirm, null, null);
+        entity.setModuleId(moduleId);
+        entity.setRepoUrl(trimToEmpty(repoUrl));
+        entity.setRepoBranch(trimToEmpty(repoBranch));
         return repository.save(entity);
     }
 

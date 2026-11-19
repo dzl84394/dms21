@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('集群编辑', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('cluster')}"></div>
+
+<main class="content">
+<h1 th:text="${cluster == null} ? '新增集群' : '编辑集群'">新增集群</h1>
+<p class="desc">
+    注册名来自 Eureka 注册表，也可手工填写；一个注册名只能属于一个集群。
+    环境按所属微服务的子系统过滤，微服务没有子系统时显示全部环境。
+</p>
+
+<div class="card">
+    <form method="post" action="/admin/cluster/save">
+        <input type="hidden" name="id" th:if="${cluster != null}" th:value="${cluster.id}">
+
+        <table>
+            <tbody>
+            <tr>
+                <td style="width:140px;">所属微服务 <span style="color:#ff4757;">*</span></td>
+                <td>
+                    <select name="appId" required style="width:320px;">
+                        <option value="">请选择微服务</option>
+                        <option th:each="a : ${apps}" th:value="${a.id}"
+                                th:attr="data-subsystem=${a.subsystemId}"
+                                th:text="${a.serviceName + (a.serviceNameCn != null and !a.serviceNameCn.isEmpty() ? '·' + a.serviceNameCn : '')}"
+                                th:selected="${selectedAppId != null and selectedAppId == a.id}">order-center·订单中心</option>
+                    </select>
+                    <a th:href="@{/admin/service/form}" style="margin-left:10px;font-size:12px;">新建微服务</a>
+                </td>
+            </tr>
+            <tr>
+                <td>注册名 <span style="color:#ff4757;">*</span></td>
+                <td>
+                    <input th:if="${cluster != null}" type="text" name="registryName"
+                           th:value="${cluster.registryName}" readonly
+                           style="width:320px;background:#f5f5f5;">
+                    <input th:if="${cluster == null}" type="text" name="registryName"
+                           list="eurekaNames" placeholder="从 Eureka 选择或手工输入" required
+                           style="width:320px;">
+                    <datalist id="eurekaNames">
+                        <option th:each="e : ${eurekaInstanceCounts}" th:value="${e.key}"
+                                th:text="${e.key + '（' + e.value + ' 个实例）'}">order-center-dev1（2 个实例）</option>
+                    </datalist>
+                    <span class="muted" style="margin-left:8px;font-size:12px;"
+                          th:if="${cluster != null}">注册名创建后不可修改</span>
+                </td>
+            </tr>
+            <tr>
+                <td>集群名</td>
+                <td>
+                    <input type="text" name="clusterName" maxlength="64"
+                           th:value="${cluster != null ? cluster.clusterName : 'default'}"
+                           placeholder="如 dev1 / prd / gray" style="width:200px;">
+                </td>
+            </tr>
+            <tr>
+                <td>环境</td>
+                <td>
+                    <select name="envId" style="width:220px;">
+                        <option value="">（不指定环境）</option>
+                        <option th:each="e : ${envs}" th:value="${e.id}"
+                                th:attr="data-subsystem=${e.subsystemId}"
+                                th:text="${e.name}"
+                                th:selected="${cluster != null and cluster.envId != null and cluster.envId == e.id}">DEV</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>机房</td>
+                <td>
+                    <input type="text" name="idc" maxlength="64" list="idcOptions"
+                           th:value="${cluster != null ? cluster.idc : ''}"
+                           placeholder="如 SH-IDC-A" style="width:220px;">
+                    <datalist id="idcOptions">
+                        <option th:each="v : ${idcOptions}" th:value="${v}"></option>
+                    </datalist>
+                </td>
+            </tr>
+            <tr>
+                <td>容器集群</td>
+                <td>
+                    <input type="text" name="k8sCluster" maxlength="128" list="k8sOptions"
+                           th:value="${cluster != null ? cluster.k8sCluster : ''}"
+                           placeholder="如 k8s-prod-sh-01；虚拟机部署可留空" style="width:320px;">
+                    <datalist id="k8sOptions">
+                        <option th:each="v : ${k8sClusterOptions}" th:value="${v}"></option>
+                    </datalist>
+                </td>
+            </tr>
+            <tr>
+                <td>命名空间</td>
+                <td><input type="text" name="namespace" maxlength="128"
+                           th:value="${cluster != null ? cluster.namespace : ''}"
+                           placeholder="如 trade-prod" style="width:220px;"></td>
+            </tr>
+            <tr>
+                <td>部署方式</td>
+                <td>
+                    <select name="deployType" style="width:160px;">
+                        <option value="">（不指定）</option>
+                        <option th:each="t : ${deployTypes}" th:value="${t}" th:text="${t}"
+                                th:selected="${cluster != null and cluster.deployType == t}">容器</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>期望副本数</td>
+                <td><input type="number" name="replicas" min="0"
+                           th:value="${cluster != null ? cluster.replicas : ''}"
+                           style="width:120px;"></td>
+            </tr>
+            <tr>
+                <td>访问入口</td>
+                <td><input type="text" name="entryUrl" maxlength="300"
+                           th:value="${cluster != null ? cluster.entryUrl : ''}"
+                           placeholder="域名或网关地址，可空" style="width:320px;"></td>
+            </tr>
+            <tr>
+                <td>状态</td>
+                <td>
+                    <select name="status" style="width:140px;">
+                        <option th:each="s : ${statusOptions}" th:value="${s}" th:text="${s}"
+                                th:selected="${(cluster != null and cluster.status == s) or (cluster == null and s == '在运')}">在运</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>认领状态</td>
+                <td>
+                    <span class="badge gray"
+                          th:text="${cluster != null ? cluster.claimStatus : '已绑定'}">已绑定</span>
+                    <span class="muted" style="margin-left:8px;font-size:12px;">人工创建的集群默认为已绑定</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:12px;">
+            <button type="submit">保存</button>
+            <a th:href="@{/admin/cluster}" style="margin-left:12px;color:#3742fa;">取消返回</a>
+        </div>
+    </form>
+</div>
+
+<div class="card" th:if="${cluster != null}">
+    <h2>运行实例（只读）</h2>
+    <p class="desc" th:if="${#lists.isEmpty(instances)}">当前没有在线实例（Eureka 未注册或服务已下线）。</p>
+    <table th:if="${!#lists.isEmpty(instances)}">
+        <thead>
+        <tr>
+            <th>实例 ID</th>
+            <th>host:port</th>
+            <th>版本</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="i : ${instances}">
+            <td th:text="${i.instanceId}">host:app:8081</td>
+            <td th:text="${i.host + ':' + i.port}">10.0.1.15:8081</td>
+            <td th:text="${i.metadata != null and i.metadata['version'] != null ? i.metadata['version'] : '-'}">1.0.0</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</main>
+
+<script>
+    (function () {
+        var appSel = document.querySelector('select[name="appId"]');
+        var envSel = document.querySelector('select[name="envId"]');
+        if (!appSel || !envSel) return;
+
+        var allEnvs = Array.prototype.slice.call(envSel.querySelectorAll('option[data-subsystem]'))
+            .map(function (o) {
+                return {value: o.value, text: o.textContent, sub: o.getAttribute('data-subsystem')};
+            });
+
+        function refresh() {
+            var opt = appSel.options[appSel.selectedIndex];
+            var subsystem = opt ? opt.getAttribute('data-subsystem') : null;
+            var current = envSel.value;
+            envSel.innerHTML = '<option value="">（不指定环境）</option>';
+            allEnvs.forEach(function (e) {
+                if (subsystem && e.sub !== subsystem) return;
+                var o = document.createElement('option');
+                o.value = e.value;
+                o.textContent = e.text;
+                if (e.value === current) o.selected = true;
+                envSel.appendChild(o);
+            });
+        }
+
+        appSel.addEventListener('change', function () {
+            refresh();
+        });
+        refresh();
+    })();
+</script>
+
+</body>
+</html>

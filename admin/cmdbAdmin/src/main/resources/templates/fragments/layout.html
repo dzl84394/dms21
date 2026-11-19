@@ -7,8 +7,8 @@
   用法：
     <head th:replace="~{fragments/layout :: head('公司', false)}"></head>
     <div th:replace="~{fragments/layout :: sidebar('company')}"></div>
-  active 取值：company / bizdomain / subsystem / module / service
-              / deployunit / env / resource / instance / version
+  active 取值：company / bizdomain / subsystem / module / service / cluster / middleware
+              / env / resource / instance / version
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="zh">
 <head th:fragment="head(title, refresh)">
@@ -86,8 +86,14 @@
         <a th:href="@{/admin/module}" th:classappend="${active == 'module'} ? 'on'">
             <span>业务模块</span>
         </a>
+        <a th:href="@{/admin/application}" th:classappend="${active == 'application'} ? 'on'">
+            <span>应用</span>
+        </a>
         <a th:href="@{/admin/service}" th:classappend="${active == 'service'} ? 'on'">
             <span>微服务</span>
+        </a>
+        <a th:href="@{/admin/cluster}" th:classappend="${active == 'cluster'} ? 'on'">
+            <span>集群</span>
         </a>
         <a th:href="@{/admin/middleware}" th:classappend="${active == 'middleware'} ? 'on'">
             <span>中间件</span>
@@ -95,9 +101,6 @@
     </nav>
     <nav class="main-nav">
         <div class="tree-title">部署与资源</div>
-        <a th:href="@{/admin/deployunit}" th:classappend="${active == 'deployunit'} ? 'on'">
-            <span>部署逻辑模块</span>
-        </a>
         <a th:href="@{/admin/env}" th:classappend="${active == 'env'} ? 'on'">
             <span>环境</span>
         </a>

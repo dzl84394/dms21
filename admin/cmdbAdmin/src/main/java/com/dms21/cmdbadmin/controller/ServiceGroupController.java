@@ -3,6 +3,7 @@ package com.dms21.cmdbadmin.controller;
 import com.dms21.cmdbadmin.entity.MasterNodeEntity;
 import com.dms21.cmdbadmin.entity.ServiceGroupEntity;
 import com.dms21.cmdbadmin.service.MasterNodeService;
+import com.dms21.cmdbadmin.service.ServiceClusterService;
 import com.dms21.cmdbadmin.service.ServiceGroupService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,6 +21,7 @@ import java.util.Map;
  *
  * 路由（微服务与中间件共用四段式 + 中间件扩展信息两段式）：
  *   GET  /admin/service              微服务管理页（Eureka 自动同步 + 人工补录负责人/子系统）
+ *   GET  /admin/service/form         微服务编辑表单页
  *   POST /admin/service/save         保存微服务（id 空=新增，非空=编辑；confirm=true 确认固定）
  *   POST /admin/service/delete/{id}  删除微服务
  *   GET  /admin/middleware           中间件管理页（纯人工录入）
@@ -30,7 +32,7 @@ import java.util.Map;
  *   POST /admin/middleware/ext/save  保存扩展信息
  *
  * 微服务数据有两个来源：Eureka 自动同步（新服务自动补进来，confirmed=false 待确认）
- * + 人工维护（补中文说明、选子系统、填负责人 → 点"确认固定"后同步不再覆盖）。
+ * + 人工维护（补中文名称、中文说明、选子系统、填负责人 → 点"确认固定"后同步不再覆盖）。
  * 中间件纯人工录入，不来自 Eureka。
  *
  * 子系统归属存 subsystem_id（手动关联 t_master_node 的子系统节点），下拉选项带 data-company/data-domain
@@ -42,11 +44,14 @@ public class ServiceGroupController {
 
     private final ServiceGroupService serviceGroupService;
     private final MasterNodeService masterNodeService;
+    private final ServiceClusterService clusterService;
 
     public ServiceGroupController(ServiceGroupService serviceGroupService,
-                                  MasterNodeService masterNodeService) {
+                                  MasterNodeService masterNodeService,
+                                  ServiceClusterService clusterService) {
         this.serviceGroupService = serviceGroupService;
         this.masterNodeService = masterNodeService;
+        this.clusterService = clusterService;
     }
 
     // ---------- 微服务管理 ----------
@@ -65,6 +70,7 @@ public class ServiceGroupController {
                            @RequestParam(required = false, defaultValue = "1") int page,
                            Model model) {
         serviceGroupService.syncFromRegistry();
+        serviceGroupService.backfillAppCodes();
         model.addAttribute("result",
                 serviceGroupService.search(q, subsystemId, status, "business", page, 20));
         // 子系统下拉（过滤+编辑共用），option 带 data-company/data-domain 供三级级联
@@ -73,6 +79,13 @@ public class ServiceGroupController {
                 masterNodeService.subsystemNamesByIds(
                         serviceGroupService.listAll().stream()
                                 .map(ServiceGroupEntity::getSubsystemId).toList()));
+        // 应用列表：业务模块名和集群数
+        model.addAttribute("moduleNames",
+                masterNodeService.subsystemNamesByIds(
+                        serviceGroupService.listAll().stream()
+                                .map(ServiceGroupEntity::getModuleId).toList()));
+        model.addAttribute("clusterCounts", clusterService.countByApp());
+        model.addAttribute("instanceCounts", clusterService.instanceCountByApp());
         // 回填查询条件
         model.addAttribute("q", q);
         model.addAttribute("subsystemId", subsystemId);
@@ -81,28 +94,61 @@ public class ServiceGroupController {
     }
 
     /**
+     * 应用新增/编辑表单页：
+     *   id 为空 → 新增应用（应用编码可填，可从 Eureka 注册名选择）
+     *   id 非空 → 编辑应用（应用编码只读）
+     */
+    @GetMapping("/service/form")
+    public String serviceForm(@RequestParam(required = false) Long id, Model model) {
+        ServiceGroupEntity svc = id == null ? null : serviceGroupService.findServiceById(id);
+        if (id != null && (svc == null || !svc.isBizService())) {
+            return "redirect:/admin/service";
+        }
+        model.addAttribute("svc", svc);
+        model.addAttribute("subsystems", masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM));
+        model.addAttribute("modules", masterNodeService.listAll(MasterNodeEntity.TYPE_MODULE));
+        model.addAttribute("subsystemNames",
+                masterNodeService.subsystemNamesByIds(
+                        masterNodeService.listAll(MasterNodeEntity.TYPE_SUBSYSTEM).stream()
+                                .map(MasterNodeEntity::getId).toList()));
+        model.addAttribute("eurekaInstanceCounts", clusterService.eurekaInstanceCounts());
+        return "service_form";
+    }
+
+    /**
      * 保存微服务（表单提交；id 空=新增，非空=编辑；confirm=true 同时确认固定）
      *
      * 示例：curl -X POST http://localhost:8091/admin/service/save \
-     *         -d "serviceName=service-a" -d "serviceNameCn=服务A-订单中心" \
+     *         -d "serviceName=service-a" -d "serviceNameCn=订单中心" \
+     *         -d "description=负责订单全生命周期管理" \
      *         -d "subsystemId=1" -d "techOwner=张三" -d "confirm=true"
-     * 返回：302 重定向回微服务管理页（保留查询条件）
+     * 返回：302 重定向回微服务管理页
      */
     @PostMapping("/service/save")
     public String saveService(@RequestParam(required = false) Long id,
                               @RequestParam String serviceName,
                               @RequestParam(required = false) String serviceNameCn,
+                              @RequestParam(required = false) String description,
+                              @RequestParam(required = false) Long moduleId,
                               @RequestParam(required = false) Long subsystemId,
+                              @RequestParam(required = false) String repoUrl,
+                              @RequestParam(required = false) String repoBranch,
                               @RequestParam(required = false) String techOwner,
                               @RequestParam(required = false) String bizOwner,
                               @RequestParam(required = false) String opsOwner,
                               @RequestParam(required = false, defaultValue = "false") boolean confirm) {
-        // 子系统存在性校验（防传错 id）
-        if (subsystemId != null && masterNodeService.findById(subsystemId) == null) {
+        // 选了业务模块时，子系统以模块的父级为准；没选模块才用表单里的子系统
+        if (moduleId != null) {
+            MasterNodeEntity module = masterNodeService.findTypedById(moduleId, MasterNodeEntity.TYPE_MODULE);
+            if (module == null) {
+                throw new IllegalArgumentException("业务模块不存在: id=" + moduleId);
+            }
+            subsystemId = module.getParentId();
+        } else if (subsystemId != null && masterNodeService.findById(subsystemId) == null) {
             throw new IllegalArgumentException("子系统不存在: id=" + subsystemId);
         }
-        serviceGroupService.upsert(id, serviceName, serviceNameCn, subsystemId,
-                techOwner, bizOwner, opsOwner, confirm, null, null);
+        serviceGroupService.saveApplication(id, serviceName, serviceNameCn, description, moduleId, subsystemId,
+                repoUrl, repoBranch, techOwner, bizOwner, opsOwner, confirm);
         return "redirect:/admin/service";
     }
 
@@ -183,7 +229,7 @@ public class ServiceGroupController {
      */
     @PostMapping("/middleware/save")
     public String saveMiddleware(@RequestParam(required = false) Long id,
-                                 @RequestParam String serviceName,
+                                 @RequestParam(required = false) String serviceName,
                                  @RequestParam(required = false) String serviceNameCn,
                                  @RequestParam(required = false) Long subsystemId,
                                  @RequestParam String category,
@@ -194,7 +240,17 @@ public class ServiceGroupController {
         if (subsystemId != null && masterNodeService.findById(subsystemId) == null) {
             throw new IllegalArgumentException("子系统不存在: id=" + subsystemId);
         }
-        serviceGroupService.upsert(id, serviceName, serviceNameCn, subsystemId,
+        // 编辑时名称通常不回传；按 id 取原名称兜底，避免 400
+        if ((serviceName == null || serviceName.isBlank()) && id != null) {
+            var existing = serviceGroupService.findServiceById(id);
+            if (existing != null) {
+                serviceName = existing.getServiceName();
+            }
+        }
+        if (serviceName == null || serviceName.isBlank()) {
+            throw new IllegalArgumentException("名称不能为空");
+        }
+        serviceGroupService.upsert(id, serviceName, serviceNameCn, null, subsystemId,
                 techOwner, bizOwner, opsOwner, false, category, subCategory);
         return "redirect:/admin/middleware";
     }

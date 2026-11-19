@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('集群', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('cluster')}"></div>
+
+<main class="content">
+<h1>集群</h1>
+<p class="desc">
+    一个微服务可以有多套环境集群（如 dev1 / dev2 / stg1 / prd），每个集群对应一个 Eureka 注册名。
+    实例数实时读取 Eureka，不落库；列表只读，修改请进入编辑页。
+</p>
+
+<form method="get" action="/admin/cluster" class="toolbar">
+    <input type="text" name="q" th:value="${q}" placeholder="搜注册名 / 集群名 / 机房 / 容器集群" style="width:280px;">
+    <select name="appId">
+        <option value="">全部微服务</option>
+        <option th:each="a : ${apps}" th:value="${a.id}"
+                th:text="${a.serviceName + (a.serviceNameCn != null and !a.serviceNameCn.isEmpty() ? '·' + a.serviceNameCn : '')}"
+                th:selected="${appId != null and appId == a.id}">order-center·订单中心</option>
+    </select>
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/cluster}" th:if="${q != '' or appId != null}" style="color:#3742fa;">清除条件</a>
+    <a th:href="@{/admin/cluster/form}" style="margin-left:auto;background:#3742fa;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;">+ 添加集群</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>微服务</th>
+        <th>注册名</th>
+        <th>集群名</th>
+        <th>环境</th>
+        <th>机房</th>
+        <th>容器集群</th>
+        <th>命名空间</th>
+        <th>实例数</th>
+        <th>状态</th>
+        <th>更新时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(clusters)}">
+        <td colspan="11" class="muted">还没有集群，点击右上角“添加集群”创建</td>
+    </tr>
+    <tr th:each="c : ${clusters}">
+        <td th:text="${appNames[c.appId] ?: ('微服务已删除#' + c.appId)}">order-center-api</td>
+        <td th:text="${c.registryName}">order-center-dev1</td>
+        <td th:text="${c.clusterName}">dev1</td>
+        <td th:text="${c.envId != null ? (envNames[c.envId] ?: '-') : '-'}">DEV</td>
+        <td th:text="${c.idc != null and !c.idc.isEmpty() ? c.idc : '-'}">SH-IDC-A</td>
+        <td th:text="${c.k8sCluster != null and !c.k8sCluster.isEmpty() ? c.k8sCluster : '-'}">k8s-dev-01</td>
+        <td th:text="${c.namespace != null and !c.namespace.isEmpty() ? c.namespace : '-'}">trade-dev</td>
+        <td th:text="${instanceCounts[c.registryName] ?: 0}">2</td>
+        <td>
+            <span class="badge" th:classappend="${c.status == '停用'} ? 'gray' : 'ok'"
+                  th:text="${c.status}">在运</span>
+        </td>
+        <td class="muted" th:text="${c.updatedAt != null} ? ${#temporals.format(c.updatedAt, 'MM-dd HH:mm')} : '-'">09-15 10:00</td>
+        <td>
+            <a th:href="@{'/admin/cluster/form?id=' + ${c.id}}">编辑</a>
+            <form method="post" th:action="@{'/admin/cluster/delete/' + ${c.id}}"
+                  style="display:inline;margin-left:8px;">
+                <button type="submit" class="del" style="padding:2px 8px;font-size:12px;">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>

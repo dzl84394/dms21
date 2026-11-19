@@ -45,13 +45,12 @@ public class PageController {
      */
 
     /**
-     * 部署逻辑模块（占位）：微服务在环境轴上的部署单元（版本/编排/域名挂载层）
+     * 部署逻辑模块已落地为“集群”页面（ServiceClusterController），旧地址保留跳转。
      * 示例：浏览器打开 http://localhost:8091/admin/deployunit
      */
     @GetMapping("/admin/deployunit")
-    public String deployunit(Model model) {
-        return page(model, "deployunit", "部署逻辑模块",
-                "微服务的部署单元：版本与发布单、域名/路由/VIP、编排模板与配置挂载层。");
+    public String deployunit() {
+        return "redirect:/admin/cluster";
     }
 
     /**

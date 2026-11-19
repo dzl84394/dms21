@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh">
+<head th:replace="~{fragments/layout :: head('应用', false)}"></head>
+<body>
+<div th:replace="~{fragments/layout :: sidebar('application')}"></div>
+
+<main class="content">
+<h1>应用</h1>
+<p class="desc">
+    应用是 Eureka 注册名<b>清洗掉环境后缀</b>后的逻辑实体（如 order-center-dev1 → order-center）。
+    没人工维护过的应用会自动从微服务汇总出来并标记“待确认”；维护后点保存即可固定。
+</p>
+
+<form method="get" action="/admin/application" class="toolbar">
+    <input type="text" name="q" th:value="${q}" placeholder="搜应用编码 / 中文名 / 负责人" style="width:280px;">
+    <button type="submit">搜索</button>
+    <a th:href="@{/admin/application}" th:if="${q != ''}" style="color:#3742fa;">清除条件</a>
+    <a th:href="@{/admin/application/form}"
+       style="margin-left:auto;background:#3742fa;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;">+ 添加应用</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>应用编码</th>
+        <th>中文名称</th>
+        <th>业务模块</th>
+        <th>子系统</th>
+        <th>微服务数</th>
+        <th>集群数</th>
+        <th>实例数</th>
+        <th>环境</th>
+        <th>技术负责人</th>
+        <th>状态</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:if="${#lists.isEmpty(apps)}">
+        <td colspan="11" class="muted">还没有应用（Eureka 里没有注册服务，或条件太严）</td>
+    </tr>
+    <tr th:each="v : ${apps}" th:classappend="${v.confirmed} ? '' : 'pending-row'">
+        <td th:text="${v.appCode}">order-center</td>
+        <td th:text="${v.nameCn != null and !v.nameCn.isEmpty() ? v.nameCn : '-'}">订单中心</td>
+        <td th:text="${v.moduleId != null ? (moduleNames[v.moduleId] ?: '-') : '-'}">订单模块</td>
+        <td th:text="${v.subsystemId != null ? (subsystemNames[v.subsystemId] ?: '-') : '-'}">交易平台</td>
+        <td th:text="${v.serviceCount}">3</td>
+        <td th:text="${v.clusterCount}">5</td>
+        <td th:text="${v.instanceCount}">10</td>
+        <td th:text="${v.envs != null and !v.envs.isEmpty() ? v.envs : '-'}">dev1, stg1, prd</td>
+        <td th:text="${v.techOwner != null and !v.techOwner.isEmpty() ? v.techOwner : '-'}">张三</td>
+        <td>
+            <span class="badge" th:classappend="${v.confirmed} ? 'ok' : 'warn'"
+                  th:text="${v.confirmed} ? '已固定' : '待确认'">待确认</span>
+        </td>
+        <td>
+            <a th:href="@{'/admin/application/form?code=' + ${v.appCode}}">编辑</a>
+            <a th:href="@{'/admin/service?q=' + ${v.appCode}}" style="margin-left:8px;">微服务</a>
+            <form method="post" th:action="@{'/admin/application/delete/' + ${v.appCode}}"
+                  th:if="${v.serviceCount == 0}" style="display:inline;margin-left:8px;">
+                <button type="submit" class="del" style="padding:2px 8px;font-size:12px;">删除</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+</main>
+
+</body>
+</html>
